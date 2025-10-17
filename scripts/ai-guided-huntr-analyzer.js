@@ -419,12 +419,13 @@ This is a setup/onboarding page. Complete it quickly:
     specificInstructions = `
 **MAIN APPLICATION:**
 Setup complete! Explore job tracking features DEEPLY:
-- Click navigation links to discover sections
+- Click navigation links to discover sections (Application Hub, Resume Builder, Contacts, etc.)
 - Interact with job boards, lists, cards
 - Try creating/adding items (jobs, contacts, notes)
 - Explore settings, profiles, user features
 - Test search, filters, sorting
 - IMPORTANT: Click items to open modals and details
+- AVOID: Upgrade/Pricing pages - focus on exploring FREE features available to users
 `;
   } else if (url.includes('/settings') || url.includes('/profile')) {
     pageType = 'settings';
@@ -537,11 +538,12 @@ ${aiState.exploredPages.slice(-5).map(p => `- ${p.name} (${p.type})`).join('\n')
 Analyze this ${pageType} page and decide the BEST next actions for thorough exploration.
 
 **PRIORITY RULES:**
-1. **NEVER repeat the same action twice** - check "Previously Explored" list
-2. **Prioritize unexplored navigation links** - discover new sections
-3. **Click on interactive elements** - buttons, cards, list items, modals
-4. **Fill forms only when necessary** - to unlock features or complete workflows
-5. **Be thorough** - explore all visible UI elements systematically
+1. **NEVER repeat the same action twice** - check "Previously Explored" list carefully
+2. **AVOID Upgrade/Pricing pages** - skip any links/buttons related to upgrading, premium, or pricing
+3. **Prioritize unexplored navigation links** - discover new sections (boards, contacts, jobs, resumes, etc.)
+4. **Click on interactive elements** - buttons, cards, list items, modals (except upgrade-related)
+5. **Fill forms only when necessary** - to unlock features or complete workflows
+6. **Be thorough** - explore all visible UI elements systematically
 
 Respond in JSON format:
 {
@@ -1126,7 +1128,29 @@ async function aiGuidedAnalysis(credentials) {
       }
 
       // Execute Claude's recommended actions (top 5 by priority)
+      // Filter out upgrade/pricing actions and previously explored actions
       const sortedActions = (guidance.nextActions || [])
+        .filter(action => {
+          // Skip upgrade/pricing related actions
+          const isUpgradeAction = action.target?.toLowerCase().includes('upgrade') ||
+                                 action.target?.toLowerCase().includes('pricing') ||
+                                 action.elementText?.toLowerCase().includes('upgrade') ||
+                                 action.elementText?.toLowerCase().includes('pricing');
+
+          // Skip previously explored actions
+          const alreadyExplored = aiState.exploredPages.some(p =>
+            p.name === action.target && p.type === action.type
+          );
+
+          if (isUpgradeAction) {
+            console.log(`  ⏭️  Skipping upgrade-related action: ${action.target}`);
+          }
+          if (alreadyExplored) {
+            console.log(`  ⏭️  Skipping already explored: ${action.target} (${action.type})`);
+          }
+
+          return !isUpgradeAction && !alreadyExplored;
+        })
         .sort((a, b) => b.priority - a.priority)
         .slice(0, 5);
 
