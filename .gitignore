@@ -15,6 +15,7 @@ huntr-deep-analysis/
 huntr-adaptive-analysis/
 huntr-ai-guided-analysis/screenshots/
 huntr-ai-guided-analysis/html/
+huntr-ai-guided-analysis/elements/
 # Keep reports and decisions for tracking
 !huntr-ai-guided-analysis/reports/
 !huntr-ai-guided-analysis/ai-decisions.json
