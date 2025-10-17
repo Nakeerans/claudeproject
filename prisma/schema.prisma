@@ -1,0 +1,199 @@
+// Prisma schema for Huntr Clone
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String      @id @default(uuid())
+  email         String      @unique
+  name          String
+  googleId      String?     @unique @map("google_id")
+  avatarUrl     String?     @map("avatar_url")
+  password      String?     // For email/password auth
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  jobs          Job[]
+  contacts      Contact[]
+  documents     Document[]
+
+  @@map("users")
+}
+
+enum JobStage {
+  WISHLIST
+  APPLIED
+  INTERVIEW
+  OFFER
+  REJECTED
+  ARCHIVED
+}
+
+model Job {
+  id            String      @id @default(uuid())
+  userId        String      @map("user_id")
+  companyName   String      @map("company_name")
+  jobTitle      String      @map("job_title")
+  location      String?
+  jobUrl        String?     @map("job_url")
+  description   String?     @db.Text
+  salaryMin     Int?        @map("salary_min")
+  salaryMax     Int?        @map("salary_max")
+  stage         JobStage    @default(WISHLIST)
+  priority      Int?        @default(3) // 1-5, 5 is highest
+  appliedDate   DateTime?   @map("applied_date")
+  deadline      DateTime?
+  notes         String?     @db.Text
+  color         String?     @default("#6a4feb") // Card color
+  position      Int         @default(0) // For ordering within stage
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contacts      JobContact[]
+  interviews    Interview[]
+  documents     Document[]
+  activities    Activity[]
+
+  @@index([userId, stage])
+  @@map("jobs")
+}
+
+model Contact {
+  id            String      @id @default(uuid())
+  userId        String      @map("user_id")
+  name          String
+  email         String?
+  phone         String?
+  linkedinUrl   String?     @map("linkedin_url")
+  company       String?
+  role          String?
+  notes         String?     @db.Text
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs          JobContact[]
+
+  @@index([userId])
+  @@map("contacts")
+}
+
+enum ContactRelationshipType {
+  RECRUITER
+  HIRING_MANAGER
+  REFERRAL
+  EMPLOYEE
+  OTHER
+}
+
+model JobContact {
+  jobId             String                    @map("job_id")
+  contactId         String                    @map("contact_id")
+  relationshipType  ContactRelationshipType   @map("relationship_type")
+  notes             String?
+  createdAt         DateTime                  @default(now()) @map("created_at")
+
+  job               Job                       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  contact           Contact                   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@id([jobId, contactId])
+  @@map("job_contacts")
+}
+
+enum InterviewType {
+  PHONE
+  VIDEO
+  IN_PERSON
+  TECHNICAL
+  BEHAVIORAL
+  PANEL
+  OTHER
+}
+
+model Interview {
+  id                String          @id @default(uuid())
+  jobId             String          @map("job_id")
+  interviewDate     DateTime        @map("interview_date")
+  interviewType     InterviewType   @map("interview_type")
+  locationOrLink    String?         @map("location_or_link")
+  interviewerName   String?         @map("interviewer_name")
+  interviewerEmail  String?         @map("interviewer_email")
+  duration          Int?            // Duration in minutes
+  notes             String?         @db.Text
+  preparationNotes  String?         @map("preparation_notes") @db.Text
+  completed         Boolean         @default(false)
+  rating            Int?            // 1-5, how well it went
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  job               Job             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@map("interviews")
+}
+
+enum DocumentType {
+  RESUME
+  COVER_LETTER
+  PORTFOLIO
+  CERTIFICATE
+  OTHER
+}
+
+model Document {
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  jobId         String?       @map("job_id") // Nullable - can be general document
+  fileName      String        @map("file_name")
+  fileType      String        @map("file_type") // mime type
+  fileUrl       String        @map("file_url")
+  fileSize      Int           @map("file_size") // bytes
+  documentType  DocumentType  @map("document_type")
+  version       Int           @default(1)
+  notes         String?
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job           Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([jobId])
+  @@map("documents")
+}
+
+enum ActivityType {
+  JOB_CREATED
+  JOB_UPDATED
+  STAGE_CHANGED
+  APPLICATION_SUBMITTED
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
+  OFFER_RECEIVED
+  OFFER_ACCEPTED
+  OFFER_REJECTED
+  NOTE_ADDED
+  CONTACT_ADDED
+  DOCUMENT_UPLOADED
+}
+
+model Activity {
+  id            String        @id @default(uuid())
+  jobId         String        @map("job_id")
+  activityType  ActivityType  @map("activity_type")
+  description   String
+  metadata      Json?         // Additional data
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  job           Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([createdAt])
+  @@map("activities")
+}

@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.credentials
+
+# Analysis outputs
+huntr-analysis/
+huntr-deep-analysis/
+huntr-adaptive-analysis/
+huntr-ai-guided-analysis/screenshots/
+huntr-ai-guided-analysis/html/
+# Keep reports and decisions for tracking
+!huntr-ai-guided-analysis/reports/
+!huntr-ai-guided-analysis/ai-decisions.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# AWS
+.aws/
+*.pem
+
+# Terraform
+infrastructure/terraform/.terraform/
+infrastructure/terraform/*.tfstate
+infrastructure/terraform/*.tfstate.backup
+infrastructure/terraform/.terraform.lock.hcl
+
+# Browser Extension
+src/browser-extension/dist/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

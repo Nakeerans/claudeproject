@@ -1,0 +1,799 @@
+import { chromium } from 'playwright';
+import Anthropic from '@anthropic-ai/sdk';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/**
+ * AI-GUIDED HUNTR.CO ANALYZER
+ *
+ * This system combines Playwright with Claude AI for intelligent exploration:
+ * 1. Playwright captures current page state (screenshot + HTML)
+ * 2. Claude AI analyzes the page and decides what to explore next
+ * 3. Playwright executes Claude's instructions
+ * 4. Claude documents findings and updates exploration strategy
+ * 5. Process repeats until 100% coverage achieved
+ *
+ * This creates a true "AI agent" that learns like a human would.
+ */
+
+const ANALYSIS_DIR = path.join(__dirname, '../huntr-ai-guided-analysis');
+const SCREENSHOTS_DIR = path.join(ANALYSIS_DIR, 'screenshots');
+const REPORTS_DIR = path.join(ANALYSIS_DIR, 'reports');
+const AI_DECISIONS_LOG = path.join(ANALYSIS_DIR, 'ai-decisions.json');
+
+const config = {
+  baseUrl: 'https://huntr.co',
+  headless: false,
+  slowMo: 500,
+  timeout: 30000,
+  maxIterations: 15,
+  claudeModel: 'claude-3-haiku-20240307' // Haiku works with our API key
+};
+
+// Initialize Claude AI
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY
+});
+
+// Learning state
+const aiState = {
+  iteration: 0,
+  exploredPages: [],
+  pendingActions: [],
+  discoveredFeatures: [],
+  aiDecisions: [],
+  screenshots: [],
+  currentGoal: 'Discover all main navigation and features',
+  explorationCoverage: 0
+};
+
+async function setupDirectories() {
+  await fs.mkdir(ANALYSIS_DIR, { recursive: true });
+  await fs.mkdir(SCREENSHOTS_DIR, { recursive: true });
+  await fs.mkdir(REPORTS_DIR, { recursive: true });
+}
+
+function humanDelay(min = 1000, max = 3000) {
+  return new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * (max - min + 1)) + min));
+}
+
+async function detectProtections(page) {
+  const hasCaptcha = await page.$('iframe[src*="recaptcha"], iframe[src*="hcaptcha"]');
+  if (hasCaptcha) {
+    console.log('\n⚠️  CAPTCHA detected! Please solve manually (90s wait)...\n');
+    await page.waitForTimeout(90000);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * CAPTURE PAGE STATE - Screenshot + HTML + DOM info
+ */
+async function capturePageState(page, pageName) {
+  const timestamp = Date.now();
+  const screenshotPath = path.join(SCREENSHOTS_DIR, `${timestamp}-${pageName}.png`);
+
+  // Full page screenshot
+  await page.screenshot({ path: screenshotPath, fullPage: true });
+
+  // Get simplified DOM structure + HTML
+  const pageData = await page.evaluate(() => {
+    // Helper to get element description
+    const describeElement = (el) => {
+      const rect = el.getBoundingClientRect();
+      return {
+        tag: el.tagName,
+        text: el.textContent?.trim().substring(0, 100),
+        classes: el.className,
+        id: el.id,
+        visible: rect.width > 0 && rect.height > 0,
+        position: { x: Math.round(rect.x), y: Math.round(rect.y) }
+      };
+    };
+
+    // Get clean HTML (remove scripts/styles for token efficiency)
+    const htmlContent = document.documentElement.outerHTML
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+
+    return {
+      url: window.location.href,
+      title: document.title,
+      html: htmlContent.substring(0, 40000), // Include HTML for analysis
+
+      // Checkboxes with full context
+      checkboxes: Array.from(document.querySelectorAll('input[type="checkbox"]')).map(cb => ({
+        id: cb.id,
+        name: cb.name,
+        checked: cb.checked,
+        value: cb.value,
+        label: cb.labels?.[0]?.textContent?.trim() || cb.closest('label')?.textContent?.trim() || '',
+        parentHTML: cb.parentElement?.outerHTML?.substring(0, 500)
+      })),
+
+      // Navigation
+      navigation: Array.from(document.querySelectorAll('nav a, aside a, [role="navigation"] a'))
+        .filter(a => a.textContent?.trim())
+        .map(describeElement),
+
+      // Interactive elements
+      buttons: Array.from(document.querySelectorAll('button, [role="button"], a[class*="btn"]'))
+        .filter(el => {
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        })
+        .map(describeElement),
+
+      // Forms
+      forms: Array.from(document.querySelectorAll('form')).map(form => ({
+        action: form.action,
+        fields: Array.from(form.querySelectorAll('input, textarea, select')).map(field => ({
+          type: field.type || field.tagName,
+          name: field.name,
+          placeholder: field.placeholder
+        }))
+      })),
+
+      // Headings (page structure)
+      headings: Array.from(document.querySelectorAll('h1, h2, h3'))
+        .map(h => ({ level: h.tagName, text: h.textContent?.trim() })),
+
+      // Tabs
+      tabs: Array.from(document.querySelectorAll('[role="tab"], [class*="tab"]'))
+        .map(describeElement),
+
+      // Modals/Dialogs
+      hasModal: !!document.querySelector('[role="dialog"], [class*="modal"]')
+    };
+  });
+
+  // Read screenshot as base64 for Claude
+  const screenshotBuffer = await fs.readFile(screenshotPath);
+  const screenshotBase64 = screenshotBuffer.toString('base64');
+
+  aiState.screenshots.push({
+    timestamp,
+    pageName,
+    path: screenshotPath,
+    url: pageData.url
+  });
+
+  return {
+    screenshot: screenshotBase64,
+    screenshotPath,
+    pageData,
+    timestamp
+  };
+}
+
+/**
+ * ASK CLAUDE AI - What should we explore next?
+ */
+async function askClaudeForGuidance(pageState, context) {
+  console.log('\n🧠 Asking Claude AI for guidance...');
+
+  const prompt = `You are an intelligent web application analyzer exploring Huntr.co, a job application tracking platform.
+
+**CRITICAL PRIORITY:** If on setup/onboarding page, BYPASS IT by clicking "Start from Scratch" checkbox or Skip button. DO NOT fill forms during setup.
+
+**Current Context:**
+- Page: ${pageState.pageData.url}
+- Page Title: ${pageState.pageData.title}
+- Current Goal: ${aiState.currentGoal}
+- Iteration: ${aiState.iteration}
+- On Setup Page: ${pageState.pageData.url.includes('/initial-setup')}
+
+**Page HTML (for precise element identification):**
+\`\`\`html
+${pageState.pageData.html.substring(0, 20000)}
+\`\`\`
+
+**Checkboxes Found (${pageState.pageData.checkboxes.length}):**
+${pageState.pageData.checkboxes.map((cb, i) => `${i + 1}. Label: "${cb.label}", ID: "${cb.id}", Name: "${cb.name}", Checked: ${cb.checked}`).join('\n')}
+
+**Navigation Items (${pageState.pageData.navigation.length}):**
+${pageState.pageData.navigation.map((nav, i) => `${i + 1}. "${nav.text}"`).join('\n')}
+
+**Buttons (${pageState.pageData.buttons.length}):**
+${pageState.pageData.buttons.slice(0, 15).map((btn, i) => `${i + 1}. "${btn.text}"`).join('\n')}
+
+**Headings:**
+${pageState.pageData.headings.map(h => `- ${h.level}: ${h.text}`).join('\n')}
+
+**Your Task:**
+Analyze the HTML and decide the BEST next action.
+
+**If on setup page:** Click "Start from Scratch" checkbox or Skip/Continue button to bypass setup.
+**If on main app:** Explore job tracking features (board, dashboard, contacts, interviews, documents).
+
+Respond in JSON format:
+{
+  "analysis": "What you see and strategy",
+  "nextActions": [
+    {
+      "type": "click|navigate|click_checkbox|wait",
+      "target": "exact text or ID of element",
+      "reason": "why this is important",
+      "priority": 1-10
+    }
+  ],
+  "discoveredFeatures": ["features found on this page"],
+  "newGoal": "updated exploration goal",
+  "estimatedCoverage": 0-100
+}`;
+
+  try {
+    const message = await anthropic.messages.create({
+      model: config.claudeModel,
+      max_tokens: 4096,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: 'image/png',
+              data: pageState.screenshot
+            }
+          },
+          {
+            type: 'text',
+            text: prompt
+          }
+        ]
+      }]
+    });
+
+    const responseText = message.content[0].text;
+
+    // Extract JSON from response (handle markdown code blocks)
+    let jsonStr = responseText;
+    const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[1];
+    }
+
+    const guidance = JSON.parse(jsonStr);
+
+    // Log Claude's decision
+    const decision = {
+      timestamp: new Date().toISOString(),
+      iteration: aiState.iteration,
+      page: pageState.pageData.url,
+      analysis: guidance.analysis,
+      actions: guidance.nextActions,
+      features: guidance.discoveredFeatures,
+      coverage: guidance.estimatedCoverage
+    };
+
+    aiState.aiDecisions.push(decision);
+    aiState.currentGoal = guidance.newGoal;
+    aiState.explorationCoverage = guidance.estimatedCoverage;
+
+    // Update discovered features
+    guidance.discoveredFeatures?.forEach(feature => {
+      if (!aiState.discoveredFeatures.includes(feature)) {
+        aiState.discoveredFeatures.push(feature);
+      }
+    });
+
+    console.log(`\n📊 Claude's Analysis:\n${guidance.analysis}\n`);
+    console.log(`📈 Estimated Coverage: ${guidance.estimatedCoverage}%`);
+    console.log(`🎯 New Goal: ${guidance.newGoal}`);
+    console.log(`\n📋 Recommended Actions (${guidance.nextActions?.length || 0}):`);
+    guidance.nextActions?.forEach((action, i) => {
+      console.log(`  ${i + 1}. [Priority ${action.priority}] ${action.type.toUpperCase()}: "${action.target}"`);
+      console.log(`     Reason: ${action.reason}`);
+    });
+
+    // Save decisions
+    await fs.writeFile(AI_DECISIONS_LOG, JSON.stringify(aiState.aiDecisions, null, 2));
+
+    return guidance;
+
+  } catch (error) {
+    console.error('❌ Claude AI error:', error.message);
+    return {
+      analysis: 'Error analyzing page',
+      nextActions: [],
+      discoveredFeatures: [],
+      newGoal: aiState.currentGoal,
+      estimatedCoverage: aiState.explorationCoverage
+    };
+  }
+}
+
+/**
+ * EXECUTE ACTION - Perform Claude's recommended action
+ */
+async function executeAction(page, action) {
+  console.log(`\n⚡ Executing: ${action.type} → "${action.target}"`);
+
+  try {
+    switch (action.type) {
+      case 'navigate':
+        // Find navigation link by text
+        const navLink = await page.$(`a:has-text("${action.target}")`);
+        if (navLink) {
+          await navLink.click();
+          await page.waitForLoadState('networkidle');
+          await humanDelay(2000, 3000);
+          console.log(`  ✓ Navigated to: ${action.target}`);
+          return true;
+        }
+        break;
+
+      case 'click':
+        // Find button by text or partial text
+        const button = await page.$(`button:has-text("${action.target}"), [role="button"]:has-text("${action.target}")`);
+        if (button) {
+          await button.click();
+          await humanDelay(1000, 2000);
+          console.log(`  ✓ Clicked: ${action.target}`);
+          return true;
+        }
+        break;
+
+      case 'click_checkbox':
+        // Find checkbox by ID, name, or label text
+        let checkbox = await page.$(`input[type="checkbox"]#${action.target}`) ||
+                      await page.$(`input[type="checkbox"][name="${action.target}"]`);
+
+        if (!checkbox) {
+          // Try finding by label text
+          const checkboxes = await page.$$('input[type="checkbox"]');
+          for (const cb of checkboxes) {
+            const label = await cb.evaluate(el => {
+              const lbl = el.labels?.[0] || el.closest('label');
+              return lbl?.textContent?.trim()?.toLowerCase() || '';
+            });
+            if (label.includes(action.target.toLowerCase())) {
+              checkbox = cb;
+              break;
+            }
+          }
+        }
+
+        if (checkbox) {
+          await checkbox.click();
+          await humanDelay(1000, 2000);
+          console.log(`  ✓ Clicked checkbox: ${action.target}`);
+          return true;
+        }
+        break;
+
+      case 'switch_tab':
+        // Find and click tab
+        const tab = await page.$(`[role="tab"]:has-text("${action.target}"), [class*="tab"]:has-text("${action.target}")`);
+        if (tab) {
+          await tab.click();
+          await humanDelay(1000, 2000);
+          console.log(`  ✓ Switched to tab: ${action.target}`);
+          return true;
+        }
+        break;
+
+      case 'scroll':
+        await page.evaluate(() => window.scrollBy(0, window.innerHeight));
+        await humanDelay(500, 1000);
+        console.log(`  ✓ Scrolled down`);
+        return true;
+
+      case 'wait':
+        await humanDelay(2000, 3000);
+        console.log(`  ✓ Waited for page to settle`);
+        return true;
+
+      case 'fill_form':
+        // Comprehensive form filling with support for various input types
+        console.log('    → Analyzing form inputs...');
+
+        // Handle text inputs and textareas with autocomplete
+        const textInputs = await page.$$('input[type="text"], input:not([type]), textarea');
+        for (const input of textInputs) {
+          const placeholder = await input.getAttribute('placeholder');
+          const name = await input.getAttribute('name');
+          const label = name || placeholder || 'unknown';
+
+          // Clear existing value first
+          await input.click();
+          await humanDelay(100, 200);
+          await input.selectText().catch(() => {});
+          await input.press('Backspace');
+          await humanDelay(100, 200);
+
+          // Determine what to fill based on field type
+          if (label.toLowerCase().includes('job') || label.toLowerCase().includes('title') || label.toLowerCase().includes('position')) {
+            console.log(`    → Filling job title field`);
+            await input.type('Software Engineer', { delay: 80 });
+            await humanDelay(1000, 1500);
+
+            // Wait for and click autocomplete dropdown
+            const dropdownOptions = await page.$$('[role="option"], [role="listbox"] > *, .ListItem__Container, [class*="list-item"], [class*="dropdown-item"], [class*="suggestion"]');
+            if (dropdownOptions.length > 0) {
+              console.log(`    → Found ${dropdownOptions.length} autocomplete options, selecting first`);
+              await dropdownOptions[0].click();
+              await humanDelay(500, 800);
+            } else {
+              await input.press('Enter');
+            }
+          } else if (label.toLowerCase().includes('email')) {
+            await input.fill('test@example.com');
+          } else if (label.toLowerCase().includes('phone')) {
+            await input.fill('555-0100');
+          } else if (label.toLowerCase().includes('company')) {
+            await input.fill('Test Company Inc');
+          } else if (label.toLowerCase().includes('location') || label.toLowerCase().includes('city')) {
+            await input.fill('San Francisco');
+          } else {
+            await input.fill('Test Data');
+          }
+          await humanDelay(200, 400);
+        }
+
+        // Handle select dropdowns
+        const selects = await page.$$('select');
+        if (selects.length > 0) {
+          console.log(`    → Found ${selects.length} select dropdown(s)`);
+          for (const select of selects) {
+            const options = await select.$$('option');
+            if (options.length > 1) {
+              // Select the second option (first is usually a placeholder)
+              await select.selectOption({ index: 1 });
+              await humanDelay(300, 500);
+            }
+          }
+        }
+
+        // COMPREHENSIVE OPTION SELECTION (radio, checkbox, button, toggle)
+        // Look for "Start from scratch" / "From scratch" / "Blank" option
+        console.log(`    → Looking for option selection elements...`);
+
+        // Method 1: Radio buttons
+        const radios = await page.$$('input[type="radio"]:not(:checked)');
+        let foundScratchOption = false;
+
+        if (radios.length > 0) {
+          console.log(`    → Found ${radios.length} radio button(s)`);
+          for (const radio of radios) {
+            const label = await radio.evaluate(r => {
+              const parent = r.closest('label') || r.parentElement;
+              return parent?.textContent?.toLowerCase() || '';
+            });
+            if (label.includes('scratch') || label.includes('from scratch') || label.includes('blank') || label.includes('start from')) {
+              console.log(`    → Clicking "Start from scratch" radio button`);
+              await radio.click();
+              await humanDelay(400, 600);
+              foundScratchOption = true;
+              break;
+            }
+          }
+          // If no scratch option, click first radio
+          if (!foundScratchOption && radios.length > 0) {
+            await radios[0].click();
+            await humanDelay(400, 600);
+          }
+        }
+
+        // Method 2: Checkboxes (for "start from scratch" or similar)
+        if (!foundScratchOption) {
+          const checkboxes = await page.$$('input[type="checkbox"]:not(:checked)');
+          if (checkboxes.length > 0) {
+            console.log(`    → Found ${checkboxes.length} checkbox(es)`);
+            for (const checkbox of checkboxes) {
+              const label = await checkbox.evaluate(c => {
+                const parent = c.closest('label') || c.parentElement;
+                return parent?.textContent?.toLowerCase() || '';
+              });
+              if (label.includes('scratch') || label.includes('from scratch') || label.includes('blank') || label.includes('start from')) {
+                console.log(`    → Clicking "Start from scratch" checkbox`);
+                await checkbox.click();
+                await humanDelay(400, 600);
+                foundScratchOption = true;
+                break;
+              }
+            }
+            // If no scratch option and few checkboxes, check first one
+            if (!foundScratchOption && checkboxes.length <= 3) {
+              await checkboxes[0].click();
+              await humanDelay(300, 500);
+            }
+          }
+        }
+
+        // Method 3: Buttons or clickable elements (like card-style options)
+        if (!foundScratchOption) {
+          const scratchButtons = await page.$$(
+            'button:has-text("Start from Scratch"), button:has-text("From Scratch"), button:has-text("Blank"), ' +
+            'div[role="button"]:has-text("Start from Scratch"), div[role="button"]:has-text("From Scratch"), ' +
+            'a:has-text("Start from Scratch"), a:has-text("From Scratch"), ' +
+            '[class*="option"]:has-text("Start from Scratch"), [class*="card"]:has-text("Start from Scratch")'
+          );
+          if (scratchButtons.length > 0) {
+            console.log(`    → Found ${scratchButtons.length} "Start from scratch" button/option`);
+            await scratchButtons[0].click();
+            await humanDelay(500, 800);
+            foundScratchOption = true;
+          }
+        }
+
+        // Method 4: Toggle switches
+        const toggles = await page.$$('[role="switch"], input[type="checkbox"][role="switch"]');
+        if (toggles.length > 0) {
+          console.log(`    → Found ${toggles.length} toggle switch(es)`);
+          for (const toggle of toggles) {
+            const isChecked = await toggle.isChecked().catch(() => false);
+            if (!isChecked) {
+              await toggle.click();
+              await humanDelay(300, 500);
+              break;
+            }
+          }
+        }
+
+        // Handle date inputs
+        const dateInputs = await page.$$('input[type="date"]');
+        for (const dateInput of dateInputs) {
+          await dateInput.fill('2024-01-15');
+          await humanDelay(200, 400);
+        }
+
+        // Try to find and click Continue/Submit button after filling
+        await humanDelay(500, 800);
+        const continueBtn = await page.$('button:has-text("Continue"), button:has-text("Next"), button:has-text("Submit"), button[type="submit"]');
+        if (continueBtn) {
+          const isEnabled = await continueBtn.isEnabled();
+          if (isEnabled) {
+            console.log(`    → Found enabled Continue button, clicking it`);
+            await continueBtn.click();
+            await page.waitForLoadState('networkidle').catch(() => {});
+            await humanDelay(1000, 1500);
+          } else {
+            console.log(`    → Continue button found but disabled`);
+          }
+        }
+
+        console.log(`  ✓ Filled form fields with comprehensive input handling`);
+        return true;
+
+      default:
+        console.log(`  ⚠ Unknown action type: ${action.type}`);
+        return false;
+    }
+
+    console.log(`  ⚠ Could not find element: ${action.target}`);
+    return false;
+
+  } catch (error) {
+    console.log(`  ❌ Error executing action: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * MAIN AI-GUIDED ANALYSIS
+ */
+async function aiGuidedAnalysis(credentials) {
+  const browser = await chromium.launch({
+    headless: config.headless,
+    slowMo: config.slowMo,
+    args: ['--disable-blink-features=AutomationControlled']
+  });
+
+  const context = await browser.newContext({
+    viewport: { width: 1920, height: 1080 },
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+  });
+
+  const page = await context.newPage();
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+  });
+
+  try {
+    console.log('\n' + '='.repeat(100));
+    console.log('🤖 AI-GUIDED HUNTR.CO ANALYZER');
+    console.log('Claude AI + Playwright working together to achieve 100% feature discovery');
+    console.log('='.repeat(100));
+
+    // LOGIN
+    console.log('\n🔐 Logging in...');
+    await page.goto(config.baseUrl);
+    await humanDelay(2000, 3000);
+    await detectProtections(page);
+
+    // Click "Log in" button in navigation
+    console.log('  → Looking for Log in button...');
+    const loginBtn = await page.locator('text=Log in').first();
+    const loginBtnVisible = await loginBtn.isVisible().catch(() => false);
+
+    if (loginBtnVisible) {
+      console.log('  → Clicking Log in button...');
+      await loginBtn.click();
+      await page.waitForLoadState('networkidle');
+      await humanDelay(2000, 3000);
+    } else {
+      console.log('  → Navigating directly to login page...');
+      await page.goto(`${config.baseUrl}/login`);
+      await humanDelay(2000, 3000);
+    }
+
+    // Wait for login form to appear
+    console.log('  → Waiting for login form...');
+    await page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 10000 });
+    await humanDelay(1000, 2000);
+
+    // Fill email
+    console.log('  → Entering email...');
+    const emailField = await page.locator('input[type="email"], input[name="email"]').first();
+    await emailField.click();
+    await emailField.fill(credentials.email);
+    await humanDelay(500, 1000);
+
+    // Fill password
+    console.log('  → Entering password...');
+    const passwordField = await page.locator('input[type="password"], input[name="password"]').first();
+    await passwordField.click();
+    await passwordField.fill(credentials.password);
+    await humanDelay(1000, 2000);
+
+    // Submit form
+    console.log('  → Submitting login form...');
+    const submitBtn = await page.locator('button:has-text("Log In"), button:has-text("Log in"), button[type="submit"]').first();
+    await submitBtn.click();
+    await page.waitForLoadState('networkidle');
+    await humanDelay(3000, 5000);
+    await detectProtections(page);
+
+    console.log('  ✓ Login successful!');
+
+    // AI-GUIDED EXPLORATION LOOP
+    for (aiState.iteration = 1; aiState.iteration <= config.maxIterations; aiState.iteration++) {
+      console.log('\n' + '='.repeat(100));
+      console.log(`ITERATION ${aiState.iteration}/${config.maxIterations}`);
+      console.log(`Goal: ${aiState.currentGoal}`);
+      console.log(`Coverage: ${aiState.explorationCoverage}%`);
+      console.log('='.repeat(100));
+
+      // Capture current page state
+      const pageName = `iter${aiState.iteration}-${new Date().getTime()}`;
+      const pageState = await capturePageState(page, pageName);
+
+      // Ask Claude AI what to do next
+      const guidance = await askClaudeForGuidance(pageState, aiState);
+
+      // Stop if Claude thinks we have good coverage
+      if (guidance.estimatedCoverage >= 95) {
+        console.log('\n✅ Claude AI reports 95%+ coverage achieved!');
+        break;
+      }
+
+      // Execute Claude's recommended actions (top 5 by priority)
+      const sortedActions = (guidance.nextActions || [])
+        .sort((a, b) => b.priority - a.priority)
+        .slice(0, 5);
+
+      for (const action of sortedActions) {
+        const success = await executeAction(page, action);
+
+        if (success) {
+          // Capture state after action
+          await humanDelay(1000, 2000);
+          const afterState = await capturePageState(page, `${pageName}-after-${action.type}`);
+
+          // Log this as explored
+          aiState.exploredPages.push({
+            name: action.target,
+            type: action.type,
+            iteration: aiState.iteration,
+            timestamp: new Date().toISOString()
+          });
+
+          await humanDelay(1000, 2000);
+        }
+      }
+    }
+
+    // GENERATE FINAL REPORT
+    console.log('\n📊 Generating AI-guided analysis report...');
+
+    const finalReport = {
+      timestamp: new Date().toISOString(),
+      model: config.claudeModel,
+      iterations: aiState.iteration,
+      finalCoverage: aiState.explorationCoverage,
+      totalDecisions: aiState.aiDecisions.length,
+      pagesExplored: aiState.exploredPages.length,
+      featuresDiscovered: aiState.discoveredFeatures,
+      screenshots: aiState.screenshots.length,
+      aiDecisions: aiState.aiDecisions
+    };
+
+    await fs.writeFile(
+      path.join(REPORTS_DIR, 'AI-GUIDED-REPORT.json'),
+      JSON.stringify(finalReport, null, 2)
+    );
+
+    const markdown = `# AI-Guided Huntr.co Analysis Report
+
+**Generated**: ${finalReport.timestamp}
+**AI Model**: ${finalReport.model}
+**Iterations**: ${finalReport.iterations}
+**Final Coverage**: ${finalReport.finalCoverage}%
+
+## Summary
+- **AI Decisions Made**: ${finalReport.totalDecisions}
+- **Pages Explored**: ${finalReport.pagesExplored}
+- **Screenshots Captured**: ${finalReport.screenshots}
+- **Features Discovered**: ${finalReport.featuresDiscovered.length}
+
+## Features Discovered by AI
+${finalReport.featuresDiscovered.map((f, i) => `${i + 1}. ${f}`).join('\n')}
+
+## AI Decision Timeline
+${aiState.aiDecisions.map((decision, i) => `
+### Decision ${i + 1} - Iteration ${decision.iteration}
+**Page**: ${decision.page}
+
+**Analysis**: ${decision.analysis}
+
+**Actions Recommended**: ${decision.actions.length}
+${decision.actions.slice(0, 3).map(a => `- [P${a.priority}] ${a.type}: "${a.target}" - ${a.reason}`).join('\n')}
+
+**Coverage**: ${decision.coverage}%
+`).join('\n---\n')}
+
+## Next Steps
+1. Review screenshots in: \`${SCREENSHOTS_DIR}\`
+2. Review AI decisions in: \`${AI_DECISIONS_LOG}\`
+3. Use findings to rebuild Huntr.co clone
+`;
+
+    await fs.writeFile(path.join(REPORTS_DIR, 'AI-SUMMARY.md'), markdown);
+
+    console.log('\n' + '='.repeat(100));
+    console.log('✅ AI-GUIDED ANALYSIS COMPLETE!');
+    console.log('='.repeat(100));
+    console.log(`\n📁 Results: ${ANALYSIS_DIR}`);
+    console.log(`📸 Screenshots: ${aiState.screenshots.length} captured`);
+    console.log(`🧠 AI Decisions: ${aiState.aiDecisions.length} made`);
+    console.log(`📊 Features Found: ${aiState.discoveredFeatures.length}`);
+    console.log(`📈 Coverage: ${aiState.explorationCoverage}%\n`);
+
+  } catch (error) {
+    console.error('\n❌ Fatal error:', error);
+    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'fatal-error.png') });
+  } finally {
+    await browser.close();
+  }
+}
+
+// Main
+async function main() {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('❌ ANTHROPIC_API_KEY environment variable required');
+    console.log('\nSet it with: export ANTHROPIC_API_KEY="your-key-here"');
+    process.exit(1);
+  }
+
+  const email = process.env.HUNTR_EMAIL || process.argv[2];
+  const password = process.env.HUNTR_PASSWORD || process.argv[3];
+
+  if (!email || !password) {
+    console.error('❌ Huntr.co credentials required');
+    console.log('\nUsage: node ai-guided-huntr-analyzer.js <email> <password>');
+    process.exit(1);
+  }
+
+  await setupDirectories();
+  await aiGuidedAnalysis({ email, password });
+}
+
+// Run if called directly
+main().catch(console.error);
