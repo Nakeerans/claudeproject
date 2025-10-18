@@ -655,17 +655,51 @@ async function executeAction(page, action) {
   try {
     switch (action.type) {
       case 'navigate':
-        // Find navigation link by text
-        const navLink = await page.$(`a:has-text("${action.target}")`);
+        // Find navigation link - handle both CSS selectors and text
+        let navLink = null;
+
+        // Method 1: Try as CSS selector first (if it looks like one)
+        if (action.target.includes('[href') || action.target.startsWith('a.') || action.target.startsWith('a#')) {
+          console.log(`    → Trying CSS selector: ${action.target}`);
+          try {
+            navLink = await page.$(action.target);
+            if (navLink) {
+              const isVisible = await navLink.isVisible().catch(() => false);
+              if (!isVisible) {
+                console.log(`    → Found but not visible, trying text search...`);
+                navLink = null;
+              }
+            }
+          } catch (error) {
+            console.log(`    → CSS selector failed: ${error.message}`);
+          }
+        }
+
+        // Method 2: Try text search if selector failed or not a selector
+        if (!navLink) {
+          console.log(`    → Trying text search: ${action.target}`);
+          navLink = await page.$(`a:has-text("${action.target}")`);
+        }
+
+        // Method 3: Try finding by elementText if available
+        if (!navLink && action.elementText) {
+          console.log(`    → Trying elementText: ${action.elementText}`);
+          navLink = await page.$(`a:has-text("${action.elementText}")`);
+        }
+
         if (navLink) {
-          await navLink.click();
-          await page.waitForLoadState('networkidle');
-          await humanDelay(2000, 3000);
-          console.log(`  ✓ Navigated to: ${action.target}`);
-          actionLog.success = true;
-          actionLog.details.navigatedTo = await page.url();
-          aiState.actionLog.push(actionLog);
-          return true;
+          const isVisible = await navLink.isVisible().catch(() => false);
+          if (isVisible) {
+            await navLink.click();
+            await page.waitForLoadState('networkidle');
+            await humanDelay(2000, 3000);
+            console.log(`  ✓ Navigated successfully`);
+            actionLog.success = true;
+            actionLog.details.navigatedTo = await page.url();
+            actionLog.details.method = action.target.includes('[href') ? 'CSS selector' : 'Text search';
+            aiState.actionLog.push(actionLog);
+            return true;
+          }
         }
         break;
 
@@ -1118,6 +1152,21 @@ async function aiGuidedAnalysis(credentials) {
       const pageName = `iter${aiState.iteration}-${new Date().getTime()}`;
       const pageState = await capturePageState(page, pageName);
 
+      // STUCK DETECTION: Check if we've been on the same page for too long
+      const currentUrl = pageState.pageData.url;
+      const recentPages = aiState.exploredPages.slice(-6); // Last 6 actions
+      const sameUrlActions = recentPages.filter(p => p.url === currentUrl).length;
+
+      if (sameUrlActions >= 4 && aiState.iteration > 5) {
+        console.log('\n⚠️  STUCK DETECTION: Been on same page for 4+ consecutive actions');
+        console.log(`    Current URL: ${currentUrl}`);
+        console.log('    → Forcing navigation to welcome page to break loop...');
+        await page.goto(`${config.baseUrl}/track/welcome`);
+        await humanDelay(2000, 3000);
+        await dismissPopupsAndModals(page);
+        continue; // Skip to next iteration
+      }
+
       // Ask Claude AI what to do next
       const guidance = await askClaudeForGuidance(pageState, aiState);
 
@@ -1166,6 +1215,7 @@ async function aiGuidedAnalysis(credentials) {
           aiState.exploredPages.push({
             name: action.target,
             type: action.type,
+            url: afterState.pageData.url,
             iteration: aiState.iteration,
             timestamp: new Date().toISOString()
           });

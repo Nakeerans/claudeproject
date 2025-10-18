@@ -1,290 +1,1035 @@
 [
   {
-    "timestamp": "2025-10-17T20:08:31.066Z",
+    "timestamp": "2025-10-17T21:12:53.719Z",
     "iteration": 1,
-    "page": "https://huntr.co/initial-setup/setup",
-    "analysis": "Initial setup page detected. The 'Continue' button is currently disabled, indicating required form field completion. Job title input is present but likely empty. The page offers multiple onboarding paths (resume upload, LinkedIn import, start from scratch).",
+    "page": "https://huntr.co/track/welcome-guide",
+    "analysis": "This is the Huntr.co welcome page for new users, serving as a central dashboard for job search tracking. The page provides quick access to key job application management features like Application Hub, Resume Builder, AI tools, and job tracking boards.",
     "actions": [
       {
-        "type": "fill_form",
-        "target": "input",
-        "elementText": "Job title",
-        "reason": "Enabling 'Continue' button requires filling job title field",
+        "type": "navigate",
+        "target": "a[href='/track/application-hub']",
+        "elementText": "Application Hub",
+        "reason": "Primary workflow for tracking job applications, likely contains core tracking functionality",
         "priority": 9
+      },
+      {
+        "type": "navigate",
+        "target": "a[href='/track/resume-builder']",
+        "elementText": "Resume Builder",
+        "reason": "Explore resume creation and management tools",
+        "priority": 8
+      },
+      {
+        "type": "navigate",
+        "target": "a[href='/track/ai-tools']",
+        "elementText": "AI Cover Letters & More",
+        "reason": "Investigate AI-powered job application assistance features",
+        "priority": 7
+      },
+      {
+        "type": "click",
+        "target": "a[href='/new-board']",
+        "elementText": "+",
+        "reason": "Explore board creation functionality",
+        "priority": 6
+      },
+      {
+        "type": "navigate",
+        "target": "a[href='/track/autofill']",
+        "elementText": "Autofill Applications",
+        "reason": "Discover automated application filling capabilities",
+        "priority": 5
       }
     ],
     "features": [
-      "Initial setup wizard",
-      "Job title input field",
-      "Multiple onboarding paths",
-      "LinkedIn profile import",
-      "Resume upload option",
-      "Start from scratch option"
+      "Job application tracking",
+      "Resume builder",
+      "AI tools navigation",
+      "Board creation",
+      "Multiple navigation links",
+      "Chrome extension option",
+      "AI resume review"
     ],
-    "coverage": 10,
-    "setupWizardStatus": "in_progress"
+    "coverage": 25
   },
   {
-    "timestamp": "2025-10-17T20:09:22.830Z",
+    "timestamp": "2025-10-17T21:13:39.292Z",
     "iteration": 2,
-    "page": "https://huntr.co/initial-setup/setup",
-    "analysis": "Setup wizard page 2 detected with import professional information options. 'Start from Scratch' option is available and must be selected to proceed.",
+    "page": "https://huntr.co/track/welcome-guide",
+    "analysis": "This is the Huntr welcome/onboarding page for a job search tracking platform. It provides an overview of key features including job application tracking, resume tools, AI-assisted job search features, and navigation to core platform sections.",
     "actions": [
       {
-        "type": "click",
-        "target": "div.SetUpBoxImportProfileAlt___StyledDiv3-sc-1n1i2m8-4.ZDUWF",
-        "elementText": "or Start from Scratch",
-        "reason": "Must select 'Start from Scratch' to complete setup wizard according to instructions",
+        "type": "navigate",
+        "target": "a[href='/track/application-hub']",
+        "elementText": "Application Hub",
+        "reason": "Explore core job tracking functionality, discover application management workflows",
         "priority": 9
       },
       {
-        "type": "click",
-        "target": "button.Checkbox__Container-sc-d1594y-0.fyOdrn",
-        "elementText": "",
-        "reason": "Alternative checkbox for 'Start from Scratch' option, fallback selection method",
-        "priority": 8
-      }
-    ],
-    "features": [
-      "Job setup wizard",
-      "Multiple import options (resume upload, LinkedIn, start from scratch)",
-      "Step tracking (currently on step 2/3)",
-      "Continue button with disabled state"
-    ],
-    "coverage": 60,
-    "setupWizardStatus": "in_progress"
-  },
-  {
-    "timestamp": "2025-10-17T20:10:08.987Z",
-    "iteration": 3,
-    "page": "https://huntr.co/initial-setup/setup",
-    "analysis": "Setup wizard page with multiple import options detected. Goal is to select 'Start from Scratch' and proceed to next page. Multiple 'Start from Scratch' text elements found, but need to identify precise clickable element.",
-    "actions": [
-      {
-        "type": "click",
-        "target": "div.SetUpBoxImportProfileAlt___StyledDiv3-sc-1n1i2m8-4.ZDUWF",
-        "elementText": "or Start from Scratch",
-        "reason": "Select 'Start from Scratch' option to bypass resume/LinkedIn import",
-        "priority": 9
-      },
-      {
-        "type": "click",
-        "target": "button.Checkbox__Container-sc-d1594y-0.jXNqlL",
-        "elementText": "",
-        "reason": "Secondary checkbox for 'Start from Scratch' option as fallback",
-        "priority": 7
-      },
-      {
-        "type": "click",
-        "target": "button.Button__BtnComponent-sc-a7uspp-0.iFkibt.SetupBoxAlt___StyledButton2-sc-6tjslj-7.cnretR",
-        "elementText": "Continue",
-        "reason": "Proceed to next setup page after selecting option",
-        "priority": 5
-      }
-    ],
-    "features": [
-      "Multi-step setup wizard",
-      "Resume import options (file upload, LinkedIn, start from scratch)",
-      "Checkbox and button-based navigation",
-      "AI-assisted resume creation hint"
-    ],
-    "coverage": 65,
-    "setupWizardStatus": "in_progress"
-  },
-  {
-    "timestamp": "2025-10-17T20:10:55.522Z",
-    "iteration": 4,
-    "page": "https://huntr.co/initial-setup/setup",
-    "analysis": "On the setup wizard's second page, multiple import options are visible. The goal is to select 'Start from Scratch' and proceed. The 'Continue' button is currently disabled, suggesting we must interact with the 'Start from Scratch' option first.",
-    "actions": [
-      {
-        "type": "click",
-        "target": "div.SetUpBoxImportProfileAlt___StyledDiv3-sc-1n1i2m8-4.ZDUWF",
-        "elementText": "or Start from Scratch",
-        "reason": "Select 'Start from Scratch' option to enable Continue button and proceed in setup wizard",
-        "priority": 9
-      },
-      {
-        "type": "click",
-        "target": "button.Checkbox__Container-sc-d1594y-0.fyOdrn",
-        "elementText": "",
-        "reason": "Secondary click on checkbox to ensure option is selected",
-        "priority": 7
-      },
-      {
-        "type": "click",
-        "target": "button.Button__BtnComponent-sc-a7uspp-0.liNkrJ.SetupBoxAlt___StyledButton2-sc-6tjslj-7.cnretR",
-        "elementText": "Continue",
-        "reason": "Proceed to next page in setup wizard",
-        "priority": 5
-      }
-    ],
-    "features": [
-      "Multiple resume import methods",
-      "Start from Scratch option",
-      "Conditional Continue button",
-      "Two-step verification for option selection"
-    ],
-    "coverage": 60,
-    "setupWizardStatus": "in_progress"
-  },
-  {
-    "timestamp": "2025-10-17T20:11:45.946Z",
-    "iteration": 5,
-    "page": "https://huntr.co/initial-setup/setup",
-    "analysis": "Setup page requires filling out job title and experience level inputs. 'Start from Scratch' is the priority option to select. 'Finish' button is currently disabled, indicating required fields need completion.",
-    "actions": [
-      {
-        "type": "click",
-        "target": "div.SetUpBoxImportProfileAlt___StyledDiv3-sc-1n1i2m8-4.ZDUWF",
-        "elementText": "Start from Scratch",
-        "reason": "Must select 'Start from Scratch' to proceed with setup wizard",
-        "priority": 10
-      },
-      {
-        "type": "fill_form",
-        "target": "input[placeholder='i.e. Software Engineer']",
-        "elementText": "Software Engineer",
-        "reason": "First required input for job title needs to be filled",
+        "type": "navigate",
+        "target": "a[href='/track/resume-builder']",
+        "elementText": "Resume Builder",
+        "reason": "Investigate resume creation and management tools",
         "priority": 8
       },
       {
-        "type": "fill_form",
-        "target": "input[placeholder='Company']",
-        "elementText": "Tech Innovations Inc",
-        "reason": "Second required input for company needs completion",
-        "priority": 7
-      }
-    ],
-    "features": [
-      "Job title input",
-      "Company input",
-      "Job search links (LinkedIn, Indeed, Google)",
-      "Setup wizard with multiple stages",
-      "Import profile options"
-    ],
-    "coverage": 60,
-    "setupWizardStatus": "in_progress"
-  },
-  {
-    "timestamp": "2025-10-17T20:12:59.313Z",
-    "iteration": 6,
-    "page": "https://huntr.co/initial-setup/setup",
-    "analysis": "Setup wizard page 2 requires selecting import method. Multiple options detected including LinkedIn and 'Start from Scratch'. Setup goal is to proceed through wizard by selecting least intrusive method.",
-    "actions": [
-      {
-        "type": "click",
-        "target": "div.SetUpBoxImportProfileAlt___StyledDiv3-sc-1n1i2m8-4.ZDUWF",
-        "elementText": "Start from Scratch",
-        "reason": "Explicitly instructed to choose 'Start from Scratch' option to protect user privacy and minimize data imports",
-        "priority": 10
-      },
-      {
-        "type": "fill_form",
-        "target": "input[placeholder='i.e. Software Engineer']",
-        "elementText": "Software Engineer",
-        "reason": "Job title input requires completion to progress in setup wizard",
-        "priority": 8
-      },
-      {
-        "type": "fill_form",
-        "target": "input[placeholder='Company']",
-        "elementText": "Tech Company",
-        "reason": "Company input requires completion to progress in setup wizard",
+        "type": "navigate",
+        "target": "a[href='/track/ai-tools']",
+        "elementText": "AI Cover Letters & More",
+        "reason": "Explore AI-powered job application assistance features",
         "priority": 7
       },
       {
         "type": "click",
-        "target": "button.Button__BtnComponent-sc-a7uspp-0.iFkibt.SetupBoxAlt___StyledButton2-sc-6tjslj-7.cnretR",
-        "elementText": "Finish",
-        "reason": "Complete setup wizard after filling required fields",
+        "target": "a[href='/track/boards/68f1297b730de1007a3642b9/board']",
+        "elementText": "Job Search 2025",
+        "reason": "Investigate existing job search board/tracking functionality",
         "priority": 6
       }
     ],
     "features": [
-      "Job Title Input",
-      "Company Input",
-      "LinkedIn Import Option",
-      "Resume Upload Option",
-      "Start from Scratch Option",
-      "Job Search Quick Links (LinkedIn, Indeed, Google)"
+      "Job tracking dashboard",
+      "Navigation menu",
+      "AI-assisted job search tools",
+      "Resume builder",
+      "Board management",
+      "Chrome extension integration",
+      "Multiple navigation links to different platform sections"
     ],
-    "coverage": 75,
-    "setupWizardStatus": "in_progress"
+    "coverage": 25
   },
   {
-    "timestamp": "2025-10-17T20:14:12.544Z",
-    "iteration": 7,
-    "page": "https://huntr.co/track/welcome-guide",
-    "analysis": "We are currently on the setup wizard, with multiple import options. Based on previous iterations and setup wizard instructions, we must choose 'Start from Scratch' to proceed.",
+    "timestamp": "2025-10-17T21:14:26.059Z",
+    "iteration": 3,
+    "page": "https://huntr.co/track/boards/68f1297b730de1007a3642b9/board",
+    "analysis": "This is a job tracking board page for 'Job Search 2025', allowing users to manage and track job applications. The page appears to be a central hub for organizing job search activities with multiple lists, search/filter capabilities, and quick creation options.",
     "actions": [
       {
         "type": "click",
-        "target": "div.SetUpBoxImportProfileAlt___StyledDiv3-sc-1n1i2m8-4.ZDUWF",
-        "elementText": "Start from Scratch",
-        "reason": "Mandatory step to complete setup wizard by selecting manual entry option",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.keeLjz",
+        "elementText": "+ Create",
+        "reason": "Explore job/application creation workflow",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/application-hub']",
+        "elementText": "Application Hub",
+        "reason": "Navigate to unexplored section to map core job tracking features",
+        "priority": 8
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/resume-builder']",
+        "elementText": "Resume Builder",
+        "reason": "Investigate resume creation and management tools",
+        "priority": 7
+      },
+      {
+        "type": "click",
+        "target": "input.BoardSearchFilter__FilterBox-sc-3u40m9-0.GtQtf",
+        "elementText": "Filter",
+        "reason": "Test search and filtering capabilities of job tracking system",
+        "priority": 6
+      }
+    ],
+    "features": [
+      "Job board tracking",
+      "Multiple list creation",
+      "Board filtering",
+      "Job application creation",
+      "Navigation to different job search tools",
+      "Chrome extension integration",
+      "AI-powered job search features"
+    ],
+    "coverage": 35
+  },
+  {
+    "timestamp": "2025-10-17T21:15:22.028Z",
+    "iteration": 4,
+    "page": "https://huntr.co/track/resume-builder/home/base",
+    "analysis": "This is the Resume Builder home page in Huntr, focused on managing base resume versions. Users can download, delete, and likely create/modify resume templates. The page appears to be part of Huntr's job application tracking workflow, with navigation links to various job search tools.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "button.ResumeBox__ActionButton-sc-ffez4v-3.hQLtQF:contains('Download')",
+        "elementText": "Download",
+        "reason": "Explore resume download functionality and understand file export options",
+        "priority": 8
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "",
+        "reason": "Navigate to AI-powered resume review feature to understand additional job search tools",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/autofill']",
+        "elementText": "",
+        "reason": "Explore autofill feature to understand automated job application capabilities",
+        "priority": 7
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/application-hub']",
+        "elementText": "",
+        "reason": "Navigate to application hub to understand overall job tracking workflow",
+        "priority": 6
+      }
+    ],
+    "features": [
+      "Resume download functionality",
+      "Resume deletion option",
+      "Base resume management",
+      "Navigation to AI tools",
+      "Chrome extension link",
+      "Multiple job search tracking features"
+    ],
+    "coverage": 45
+  },
+  {
+    "timestamp": "2025-10-17T21:16:11.843Z",
+    "iteration": 5,
+    "page": "https://huntr.co/track/autofill",
+    "analysis": "This is the Huntr Autofill Applications page, designed to help users quickly populate job application forms using pre-built profile information. The page seems focused on providing AI and browser extension capabilities to streamline job application processes.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "a[href='/track/profile/builder/autofill']",
+        "elementText": "Edit Profile",
+        "reason": "Explore profile configuration options for autofill functionality",
+        "priority": 8
+      },
+      {
+        "type": "navigate",
+        "target": "a[href='https://chrome.google.com/webstore/detail/huntr-job-search-tracker/mihdfbecejheednfigjpdacgeilhlmnf']",
+        "elementText": "or get the extension",
+        "reason": "Investigate Chrome extension capabilities for job tracking",
+        "priority": 7
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-tools']",
+        "elementText": "",
+        "reason": "Discover additional AI-powered job search tools",
+        "priority": 9
+      }
+    ],
+    "features": [
+      "Resume Autofill",
+      "Profile Builder",
+      "Chrome Extension Integration",
+      "AI-Assisted Job Application Tools"
+    ],
+    "coverage": 45
+  },
+  {
+    "timestamp": "2025-10-17T21:16:58.218Z",
+    "iteration": 6,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This is Huntr's AI Tools page, focused on providing AI-powered assistance for job application processes. The page appears to offer AI-driven features for creating cover letters, resume enhancements, and other job application support tools.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.gkbRlp",
+        "elementText": "Try AI Tools",
+        "reason": "Explore the core AI functionality, though currently disabled",
+        "priority": 7
+      },
+      {
+        "type": "navigate",
+        "target": "a[href='/track/resume-builder']",
+        "elementText": "",
+        "reason": "Unexplored navigation link that might reveal additional job application features",
+        "priority": 8
+      },
+      {
+        "type": "navigate",
+        "target": "a[href='/track/autofill']",
+        "elementText": "",
+        "reason": "Investigate potential AI-powered autofill capabilities",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "button.DropDownField__FieldContainer-sc-qgzswx-1.lnTBcG",
+        "elementText": "Select one of your saved jobs",
+        "reason": "Explore job selection mechanism potentially related to AI tools",
+        "priority": 6
+      }
+    ],
+    "features": [
+      "AI Tools page",
+      "Cover letter generation",
+      "Job application AI assistance",
+      "Dropdown for job selection",
+      "Multiple navigation links to related features",
+      "Chrome extension link"
+    ],
+    "coverage": 45
+  },
+  {
+    "timestamp": "2025-10-17T21:17:44.740Z",
+    "iteration": 7,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This is Huntr's AI Tools page, focused on leveraging artificial intelligence for job application processes. The page seems designed to help users generate cover letters, enhance job applications, and provide AI-powered assistance in job search workflows.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.gkbRlp",
+        "elementText": "Try AI Tools",
+        "reason": "Attempt to trigger AI tool functionality, potentially revealing more detailed AI features",
+        "priority": 8
+      },
+      {
+        "type": "click",
+        "target": "button.DropDownField__FieldContainer-sc-qgzswx-1.lnTBcG",
+        "elementText": "Select one of your saved jobs",
+        "reason": "Explore job selection modal, which might connect AI tools to specific job applications",
+        "priority": 7
+      },
+      {
+        "type": "fill_form",
+        "target": "input.TextInput__Input-sc-bn1zj0-0.TextInput___StyledInput-sc-bn1zj0-1.iXDyJm",
+        "elementText": "Search",
+        "reason": "Test search functionality to understand AI tool filtering or job search capabilities",
+        "priority": 6
+      }
+    ],
+    "features": [
+      "AI-powered cover letter generation",
+      "Job application AI assistance",
+      "Search functionality",
+      "Job selection dropdown",
+      "Chrome extension link",
+      "Multiple navigation links to other Huntr features"
+    ],
+    "coverage": 45
+  },
+  {
+    "timestamp": "2025-10-17T21:18:32.029Z",
+    "iteration": 8,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This is the AI Tools page for Huntr, focusing on AI-powered job application assistance. The page appears to offer AI capabilities for creating cover letters, with a main heading 'Cover Letters and More, With the Help of AI'. The page seems to be part of Huntr's job application tracking and enhancement toolkit.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.gkbRlp",
+        "elementText": "Try AI Tools",
+        "reason": "Investigate the AI tools functionality, though currently disabled",
+        "priority": 7
+      },
+      {
+        "type": "click",
+        "target": "button.DropDownField__FieldContainer-sc-qgzswx-1.lnTBcG",
+        "elementText": "Select one of your saved jobs",
+        "reason": "Explore job selection mechanism for AI tool integration",
+        "priority": 8
+      },
+      {
+        "type": "navigate",
+        "target": "a[href='/track/resume-builder']",
+        "elementText": "",
+        "reason": "Investigate how AI tools might interact with resume building",
+        "priority": 9
+      }
+    ],
+    "features": [
+      "AI-powered cover letter generation",
+      "Job selection dropdown",
+      "Search functionality",
+      "Navigation to different Huntr tools",
+      "LinkedIn integration options",
+      "File upload capabilities"
+    ],
+    "coverage": 45
+  },
+  {
+    "timestamp": "2025-10-17T21:19:12.275Z",
+    "iteration": 9,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This is the AI Tools page for Huntr, focused on providing AI-powered assistance for job applications. The page highlights cover letter generation and other AI-driven job search support features. Users can explore AI-powered tools to enhance their job application process.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "",
+        "reason": "Navigate to AI Resume Review to explore additional AI-powered job application tools",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "button.DropDownField__FieldContainer-sc-qgzswx-1.lnTBcG",
+        "elementText": "Select one of your saved jobs",
+        "reason": "Investigate job selection dropdown to understand job tracking integration",
+        "priority": 8
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/application-hub']",
+        "elementText": "",
+        "reason": "Explore the Application Hub to understand overall job tracking workflow",
+        "priority": 7
+      },
+      {
+        "type": "fill_form",
+        "target": "input.TextInput__Input-sc-bn1zj0-0.TextInput___StyledInput-sc-bn1zj0-1.iXDyJm",
+        "elementText": "Search",
+        "reason": "Test search functionality within AI tools section",
+        "priority": 6
+      }
+    ],
+    "features": [
+      "AI-powered cover letter generation",
+      "Job selection dropdown",
+      "Search functionality",
+      "Navigation links to different job tracking sections",
+      "Chrome extension link",
+      "AI tools integration"
+    ],
+    "coverage": 65
+  },
+  {
+    "timestamp": "2025-10-17T21:19:52.223Z",
+    "iteration": 10,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This page focuses on AI-powered job application tools, specifically cover letter generation and AI assistance. The page appears to be part of Huntr's job tracking platform, offering AI-enhanced features for job seekers to improve their application process.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "button.DropDownField__FieldContainer-sc-qgzswx-1.lnTBcG",
+        "elementText": "Select one of your saved jobs",
+        "reason": "Explore job selection mechanism for AI tools",
+        "priority": 8
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/resume-builder']",
+        "elementText": "",
+        "reason": "Navigate to resume builder to understand AI integration",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/application-hub']",
+        "elementText": "",
+        "reason": "Explore main application tracking hub",
+        "priority": 7
+      },
+      {
+        "type": "fill_form",
+        "target": "input.TextInput__Input-sc-bn1zj0-0.TextInput___StyledInput-sc-bn1zj0-1.iXDyJm",
+        "elementText": "Search",
+        "reason": "Test search functionality for AI tools",
+        "priority": 6
+      }
+    ],
+    "features": [
+      "AI-powered cover letter generation",
+      "Job application tracking",
+      "Search functionality",
+      "Multiple navigation links",
+      "Job selection dropdown",
+      "AI tools integration"
+    ],
+    "coverage": 45
+  },
+  {
+    "timestamp": "2025-10-17T21:20:33.709Z",
+    "iteration": 11,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This is the AI Tools page for Huntr, focused on providing AI-powered job application assistance. The page appears to offer AI-driven features for job seekers, with a primary heading 'Cover Letters and More, With the Help of AI'. Users can likely generate cover letters, get job application recommendations, and leverage AI technologies in their job search process.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "button.DropDownField__FieldContainer-sc-qgzswx-1.lnTBcG",
+        "elementText": "Select one of your saved jobs",
+        "reason": "Explore job selection mechanism for AI tools integration",
+        "priority": 8
+      },
+      {
+        "type": "navigate",
+        "target": "a[href='/track/resume-builder']",
+        "elementText": "",
+        "reason": "Discover how AI tools might integrate with resume building",
+        "priority": 7
+      },
+      {
+        "type": "click",
+        "target": "button.ListItem__Container-sc-1cq76gb-0.fFWSnb",
+        "elementText": "Test Data @ Test Company Inc",
+        "reason": "Investigate sample job data and potential AI tool interactions",
+        "priority": 6
+      },
+      {
+        "type": "fill_form",
+        "target": "input.TextInput__Input-sc-bn1zj0-0.TextInput___StyledInput-sc-bn1zj0-1.iXDyJm",
+        "elementText": "Search",
+        "reason": "Test search functionality within AI tools section",
+        "priority": 5
+      }
+    ],
+    "features": [
+      "AI-powered cover letter generation",
+      "Job selection dropdown",
+      "Search functionality",
+      "Navigation links to related tools",
+      "Sample job data integration"
+    ],
+    "coverage": 45
+  },
+  {
+    "timestamp": "2025-10-17T21:21:20.872Z",
+    "iteration": 12,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This is the AI Tools page for Huntr, focused on providing AI-powered job application support. The page emphasizes AI capabilities for tasks like cover letter generation and job application assistance. The main heading 'Cover Letters and More, With the Help of AI' suggests multiple AI-driven features for job seekers.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "a[href='/boards/68f1297b730de1007a3642b9/job/68f2a36a14d1eb00534eb6c9/job-ai-tools']",
+        "elementText": "Try AI Tools",
+        "reason": "Directly explore the specific AI tools functionality to understand its capabilities",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.hNJVUd",
+        "elementText": "Try AI Tools",
+        "reason": "Alternative button to access AI tools, might reveal different interaction path",
+        "priority": 8
+      },
+      {
+        "type": "navigate",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "",
+        "reason": "Explore AI-powered resume review feature, complementing AI tools",
+        "priority": 7
+      },
+      {
+        "type": "navigate",
+        "target": "a[href='/track/resume-builder']",
+        "elementText": "",
+        "reason": "Check how AI might integrate with resume building process",
+        "priority": 6
+      }
+    ],
+    "features": [
+      "AI-powered cover letter generation",
+      "AI tools for job applications",
+      "Multiple entry points to AI features",
+      "Chrome extension integration",
+      "LinkedIn connection options"
+    ],
+    "coverage": 45
+  },
+  {
+    "timestamp": "2025-10-17T21:22:37.612Z",
+    "iteration": 13,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This is the AI Tools page in Huntr, focusing on AI-powered job application support. The page appears to provide AI-driven features for job seekers, with a primary heading 'Cover Letters and More, With the Help of AI'. It seems to offer AI capabilities for various job application-related tasks.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "",
+        "reason": "Explore AI Resume Review feature, which seems unexplored and directly related to job application support",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.hNJVUd",
+        "elementText": "Try AI Tools",
+        "reason": "Directly engage with AI tools to understand their functionality and workflow",
+        "priority": 8
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/autofill']",
+        "elementText": "",
+        "reason": "Investigate the autofill feature, which could be another AI-powered productivity tool",
+        "priority": 7
+      }
+    ],
+    "features": [
+      "AI-powered cover letter generation",
+      "AI tools navigation",
+      "Job application AI support",
+      "Chrome extension link",
+      "Multiple AI-related features (resume review, autofill)",
+      "LinkedIn integration options"
+    ],
+    "coverage": 65
+  },
+  {
+    "timestamp": "2025-10-17T21:23:22.255Z",
+    "iteration": 14,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This page focuses on Huntr's AI-powered job application support tools, specifically showcasing AI capabilities for cover letters, job application enhancement, and workflow integration. The page suggests users can leverage AI to improve their job search and application process.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "AI Resume Review",
+        "reason": "Unexplored navigation link that might reveal additional AI-powered resume enhancement features",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.hNJVUd",
+        "elementText": "Try AI Tools",
+        "reason": "Direct interaction with AI tool exploration, potentially revealing more detailed AI capabilities",
+        "priority": 8
+      },
+      {
+        "type": "navigate",
+        "target": "a[href='/track/autofill']",
+        "elementText": "Autofill",
+        "reason": "Unexplored navigation section that might show automated job application features",
+        "priority": 7
+      }
+    ],
+    "features": [
+      "AI-powered cover letter generation",
+      "Job application AI support tools",
+      "Navigation links to AI-related features",
+      "Chrome extension integration",
+      "AI Resume Review section"
+    ],
+    "coverage": 65
+  },
+  {
+    "timestamp": "2025-10-17T21:24:01.246Z",
+    "iteration": 15,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This is Huntr's AI Tools page, focused on demonstrating AI-powered job application support features. The page highlights cover letter generation and AI assistance capabilities for job seekers. The main goal appears to be introducing users to Huntr's AI-enhanced productivity tools for job application processes.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-tools']",
+        "elementText": "AI Tools",
+        "reason": "Confirm current page's interactive elements and potential sub-sections",
+        "priority": 7
+      },
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.hNJVUd",
+        "elementText": "Try AI Tools",
+        "reason": "Explore specific AI tool functionality without requiring upgrade",
+        "priority": 9
+      },
+      {
+        "type": "navigate",
+        "target": "a[href='/track/resume-builder']",
+        "elementText": "Resume Builder",
+        "reason": "Investigate how AI tools integrate with resume creation workflow",
+        "priority": 8
+      }
+    ],
+    "features": [
+      "AI Cover Letter Generation",
+      "Job Application AI Support",
+      "Navigation to AI-powered sections",
+      "Chrome Extension Link",
+      "Interactive 'Try AI Tools' button"
+    ],
+    "coverage": 65
+  },
+  {
+    "timestamp": "2025-10-17T21:24:42.293Z",
+    "iteration": 16,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This is the AI Tools page for Huntr, focused on AI-powered job application assistance. The page appears to provide AI capabilities for job seekers, with a primary heading 'Cover Letters and More, With the Help of AI'. The page seems to offer AI-driven tools for job application support.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "",
+        "reason": "Explore AI Resume Review feature to understand AI-powered resume enhancement capabilities",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.hNJVUd",
+        "elementText": "Try AI Tools",
+        "reason": "Directly engage with AI tools to understand their functionality and workflow",
+        "priority": 10
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/autofill']",
+        "elementText": "",
+        "reason": "Investigate autofill feature to see how AI can streamline job application processes",
+        "priority": 8
+      },
+      {
+        "type": "navigate",
+        "target": "a[href='/track/resume-builder']",
+        "elementText": "",
+        "reason": "Explore resume builder to understand its integration with AI tools",
+        "priority": 7
+      }
+    ],
+    "features": [
+      "AI-powered cover letter generation",
+      "AI tools navigation",
+      "Try AI Tools button",
+      "Multiple AI-related page links (resume review, autofill, resume builder)",
+      "Chrome extension link"
+    ],
+    "coverage": 45
+  },
+  {
+    "timestamp": "2025-10-17T21:25:22.352Z",
+    "iteration": 17,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This is Huntr's AI Tools page, focused on demonstrating AI-powered job application assistance features. The page highlights cover letter generation and AI-driven job application support, with a primary heading 'Cover Letters and More, With the Help of AI'. Users can explore and interact with AI tools for job search and application process.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "",
+        "reason": "Explore AI resume review feature, potentially uncovering additional AI-powered job application assistance tools",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.hNJVUd",
+        "elementText": "Try AI Tools",
+        "reason": "Directly engage with AI tools functionality to understand its capabilities and workflow",
+        "priority": 8
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/autofill']",
+        "elementText": "",
+        "reason": "Investigate autofill feature, which might be another AI-assisted application tool",
+        "priority": 7
+      }
+    ],
+    "features": [
+      "AI-powered cover letter generation",
+      "Job application AI tools",
+      "Navigation links to related features",
+      "Chrome extension integration",
+      "Multiple AI assistance options"
+    ],
+    "coverage": 65
+  },
+  {
+    "timestamp": "2025-10-17T21:26:01.926Z",
+    "iteration": 18,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This is Huntr's AI Tools page focused on providing AI-powered assistance for job applications, specifically cover letter generation and other AI-driven job search features. The page highlights AI capabilities to help users streamline their job application process.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "",
+        "reason": "Explore AI Resume Review feature to understand AI-powered resume enhancement capabilities",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.hNJVUd",
+        "elementText": "Try AI Tools",
+        "reason": "Directly engage with AI tool functionality to see specific AI-powered features",
+        "priority": 10
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/autofill']",
+        "elementText": "",
+        "reason": "Investigate autofill feature to understand AI's role in application form completion",
+        "priority": 8
+      }
+    ],
+    "features": [
+      "AI-powered Cover Letter Generation",
+      "Navigation to different job tracking sections",
+      "Chrome Extension Link",
+      "AI Tools Entry Point",
+      "Multiple AI-assisted job application features"
+    ],
+    "coverage": 65
+  },
+  {
+    "timestamp": "2025-10-17T21:26:41.247Z",
+    "iteration": 19,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This page appears to be Huntr's AI Tools section, focusing on AI-powered job application assistance. The main heading 'Cover Letters and More, With the Help of AI' suggests advanced AI features for job seekers, including automated cover letter generation and other AI-driven job application support tools.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "AI Resume Review",
+        "reason": "Explore the AI-powered resume review feature to understand its capabilities",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/autofill']",
+        "elementText": "Autofill",
+        "reason": "Investigate the AI autofill functionality for job applications",
+        "priority": 8
+      },
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.hNJVUd",
+        "elementText": "Try AI Tools",
+        "reason": "Directly engage with the AI tools to understand their specific functionalities",
         "priority": 10
       }
     ],
     "features": [
-      "Job search tracking platform",
-      "Multiple profile import options",
-      "Setup wizard with guided onboarding",
-      "Navigation links to various job search tools",
-      "Chrome extension integration",
-      "Upgrade/Premium options"
+      "AI Cover Letter Generation",
+      "Navigation to AI-related features",
+      "Chrome Extension Link",
+      "Multiple AI-powered job application tools",
+      "AI Resume Review option",
+      "Autofill functionality"
     ],
-    "coverage": 70,
-    "setupWizardStatus": "in_progress"
+    "coverage": 65
   },
   {
-    "timestamp": "2025-10-17T20:14:50.146Z",
-    "iteration": 8,
-    "page": "https://huntr.co/track/welcome-guide",
-    "analysis": "Currently on Huntr.co welcome/setup page with multiple navigation options and incomplete setup wizard. Multiple entry points for setup exist, but precise 'Start from Scratch' selector needs identification.",
+    "timestamp": "2025-10-17T21:27:21.402Z",
+    "iteration": 20,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This is Huntr's AI Tools page, focused on leveraging artificial intelligence to assist job seekers in their application process. The main heading 'Cover Letters and More, With the Help of AI' suggests comprehensive AI-powered job application support tools.",
     "actions": [
       {
         "type": "click",
-        "target": "div.SetUpBoxImportProfileAlt___StyledDiv3-sc-1n1i2m8-4.ZDUWF",
-        "elementText": "Start from Scratch",
-        "reason": "Manually initiate profile setup without importing external data",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "AI Resume Review",
+        "reason": "Unexplored navigation link that likely reveals AI-powered resume improvement features",
         "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.hNJVUd",
+        "elementText": "Try AI Tools",
+        "reason": "Direct interaction with core AI functionality, may open new modal or workflow",
+        "priority": 8
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/autofill']",
+        "elementText": "Autofill",
+        "reason": "Potentially reveals AI-assisted form completion capabilities",
+        "priority": 7
       }
     ],
     "features": [
-      "Job tracking platform",
-      "Resume builder",
-      "Application hub",
-      "AI resume review",
-      "Chrome extension integration",
-      "Multiple job board management"
+      "AI Tools page",
+      "Cover letter generation",
+      "Multiple AI-powered job application assistance features",
+      "Chrome extension link",
+      "Navigation to different job application support sections"
     ],
-    "coverage": 45,
-    "setupWizardStatus": "in_progress"
+    "coverage": 65
   },
   {
-    "timestamp": "2025-10-17T20:16:05.325Z",
-    "iteration": 10,
-    "page": "https://huntr.co/track/welcome-guide",
-    "analysis": "Currently on job tracking dashboard, setup wizard not fully completed. Need to navigate through setup process using 'Start from Scratch' method. Multiple navigation links present, but focus is on completing initial profile setup.",
+    "timestamp": "2025-10-17T21:28:01.943Z",
+    "iteration": 21,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This is the AI Tools page for Huntr, focused on AI-powered job application assistance. The page appears to showcase AI capabilities for job seekers, with a primary heading 'Cover Letters and More, With the Help of AI'. It seems to be a central hub for AI-driven job application features.",
     "actions": [
       {
-        "type": "navigate",
-        "target": "a[href='/track/welcome']",
-        "elementText": "Welcome",
-        "reason": "Restart setup wizard to ensure complete profile configuration",
+        "type": "click",
+        "target": "a[href='/track/resume-builder']",
+        "elementText": "",
+        "reason": "Explore AI Resume Builder to understand AI integration in resume creation",
         "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.hNJVUd",
+        "elementText": "Try AI Tools",
+        "reason": "Directly engage with AI tools to understand their functionality",
+        "priority": 10
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "",
+        "reason": "Investigate AI-powered resume review feature",
+        "priority": 8
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/application-hub']",
+        "elementText": "",
+        "reason": "Navigate to Application Hub to explore overall workflow",
+        "priority": 7
       }
     ],
     "features": [
-      "Job Application Tracking Dashboard",
-      "Resume Builder",
+      "AI-powered cover letter generation",
+      "AI Tools section",
+      "Navigation to Resume Builder",
       "AI Resume Review",
-      "Application Hub",
-      "Chrome Extension Integration",
-      "Multiple Job Search Boards"
+      "Chrome extension link",
+      "Multiple AI-assisted job application features"
     ],
-    "coverage": 60,
-    "setupWizardStatus": "in_progress"
+    "coverage": 45
+  },
+  {
+    "timestamp": "2025-10-17T21:28:41.613Z",
+    "iteration": 22,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This page focuses on Huntr's AI-powered job application assistance tools, specifically highlighting AI capabilities for cover letters and job application support. The page appears to be a central hub for AI-driven job search and application features.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "",
+        "reason": "Explore AI resume review functionality, an unexplored navigation link with potential insights into AI tools",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/autofill']",
+        "elementText": "",
+        "reason": "Investigate the autofill feature, likely an AI-powered tool for streamlining job applications",
+        "priority": 8
+      },
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.hNJVUd",
+        "elementText": "Try AI Tools",
+        "reason": "Directly engage with AI tools to understand their specific capabilities and workflow",
+        "priority": 10
+      }
+    ],
+    "features": [
+      "AI-powered cover letter generation",
+      "Navigation links to AI-related tools",
+      "Chrome extension availability",
+      "Job board integration",
+      "AI tools section"
+    ],
+    "coverage": 65
+  },
+  {
+    "timestamp": "2025-10-17T21:29:20.235Z",
+    "iteration": 23,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This page focuses on Huntr's AI-powered job application assistance tools, specifically showcasing AI capabilities for generating cover letters, resumes, and other job application materials. The page emphasizes automated, intelligent support for job seekers.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "a[href='/track/resume-builder']",
+        "elementText": "",
+        "reason": "Navigate to Resume Builder to explore AI-driven resume creation features",
+        "priority": 8
+      },
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.hNJVUd",
+        "elementText": "Try AI Tools",
+        "reason": "Directly engage with AI tool features to understand their functionality",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "",
+        "reason": "Explore AI Resume Review to understand how AI evaluates and improves resumes",
+        "priority": 7
+      }
+    ],
+    "features": [
+      "AI Cover Letter Generation",
+      "AI Resume Tools",
+      "Navigation to specialized AI job search features",
+      "Chrome Extension Integration",
+      "Job Application AI Assistance"
+    ],
+    "coverage": 65
+  },
+  {
+    "timestamp": "2025-10-17T21:30:00.818Z",
+    "iteration": 24,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This page focuses on Huntr's AI-powered job application assistance tools, specifically highlighting cover letter generation and AI-driven job application support. The page appears to be part of the main application workflow, offering AI-powered tools to enhance job search and application processes.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "",
+        "reason": "Explore AI Resume Review feature to understand comprehensive AI assistance",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/resume-builder']",
+        "elementText": "",
+        "reason": "Investigate Resume Builder to see how AI might assist in resume creation",
+        "priority": 8
+      },
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.hNJVUd",
+        "elementText": "Try AI Tools",
+        "reason": "Directly engage with AI tools to understand their functionality",
+        "priority": 10
+      },
+      {
+        "type": "click",
+        "target": "a[href='/track/autofill']",
+        "elementText": "",
+        "reason": "Explore autofill feature to understand AI-driven application assistance",
+        "priority": 7
+      }
+    ],
+    "features": [
+      "AI-powered Cover Letter Generation",
+      "Navigation to AI Tools",
+      "AI Resume Review Link",
+      "Resume Builder Link",
+      "Autofill Feature Link",
+      "Chrome Extension Link",
+      "Job Board Navigation"
+    ],
+    "coverage": 65
+  },
+  {
+    "timestamp": "2025-10-17T21:30:40.511Z",
+    "iteration": 25,
+    "page": "https://huntr.co/track/ai-tools",
+    "analysis": "This is the AI Tools page within Huntr's job application tracking platform, focused on AI-powered assistance for job applications. The page showcases AI capabilities for cover letter generation, job application support, and workflow optimization.",
+    "actions": [
+      {
+        "type": "click",
+        "target": "a[href='/track/ai-resume-review']",
+        "elementText": "AI Resume Review",
+        "reason": "Explore AI-powered resume review feature, unexplored navigation link",
+        "priority": 9
+      },
+      {
+        "type": "click",
+        "target": "button.Button__BtnComponent-sc-a7uspp-0.hNJVUd",
+        "elementText": "Try AI Tools",
+        "reason": "Directly engage with AI tools functionality",
+        "priority": 8
+      },
+      {
+        "type": "click",
+        "target": "a[href='https://chrome.google.com/webstore/detail/huntr-job-search-tracker/mihdfbecejheednfigjpdacgeilhlmnf']",
+        "elementText": "",
+        "reason": "Investigate Chrome extension integration",
+        "priority": 6
+      }
+    ],
+    "features": [
+      "AI-powered cover letter generation",
+      "Job application AI assistance",
+      "Navigation links to AI-related tools",
+      "Chrome extension option",
+      "AI resume review",
+      "Workflow optimization tools"
+    ],
+    "coverage": 65
   }
 ]
