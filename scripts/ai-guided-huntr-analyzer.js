@@ -36,8 +36,8 @@ const PAGES_DATABASE = path.join(ANALYSIS_DIR, 'pages-database.json');
 const config = {
   baseUrl: 'https://huntr.co',
   headless: false,
-  slowMo: 500,
-  timeout: 30000,
+  slowMo: 100, // Reduced from 500ms to 100ms for faster execution
+  timeout: 15000, // Reduced from 30s to 15s
   maxIterations: 25, // Increased from 10 to 25 for deeper feature exploration
   claudeModel: 'claude-3-5-haiku-20241022' // Updated to latest Haiku model
 };
@@ -97,7 +97,7 @@ async function setupDirectories() {
   await fs.mkdir(ELEMENTS_DIR, { recursive: true });
 }
 
-function humanDelay(min = 1000, max = 3000) {
+function humanDelay(min = 500, max = 1000) {
   return new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * (max - min + 1)) + min));
 }
 
@@ -691,8 +691,8 @@ async function executeAction(page, action) {
           const isVisible = await navLink.isVisible().catch(() => false);
           if (isVisible) {
             await navLink.click();
-            await page.waitForLoadState('networkidle');
-            await humanDelay(2000, 3000);
+            await page.waitForLoadState('domcontentloaded'); // Changed from networkidle for speed
+            await humanDelay(500, 800); // Reduced from 2000-3000ms
             console.log(`  ✓ Navigated successfully`);
             actionLog.success = true;
             actionLog.details.navigatedTo = await page.url();
@@ -717,7 +717,7 @@ async function executeAction(page, action) {
 
               if (isVisible && isEnabled) {
                 await selectorElement.click();
-                await humanDelay(1000, 2000);
+                await humanDelay(300, 500); // Reduced from 1000-2000ms
                 console.log(`  ✓ Clicked element with selector: ${action.target}`);
                 actionLog.success = true;
                 actionLog.details.method = 'CSS selector';
@@ -1208,7 +1208,7 @@ async function aiGuidedAnalysis(credentials) {
 
         if (success) {
           // Capture state after action
-          await humanDelay(1000, 2000);
+          await humanDelay(300, 500); // Reduced from 1000-2000ms
           const afterState = await capturePageState(page, `${pageName}-after-${action.type}`);
 
           // Log this as explored
@@ -1220,7 +1220,7 @@ async function aiGuidedAnalysis(credentials) {
             timestamp: new Date().toISOString()
           });
 
-          await humanDelay(1000, 2000);
+          await humanDelay(200, 400); // Reduced from 1000-2000ms
         }
       }
     }
