@@ -1,65 +1,75 @@
 # Dependencies
 node_modules/
-package-lock.json
-yarn.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
 
 # Environment variables
 .env
 .env.local
-.env.*.local
-.credentials
-
-# Analysis outputs
-huntr-analysis/
-huntr-deep-analysis/
-huntr-adaptive-analysis/
-huntr-ai-guided-analysis/screenshots/
-huntr-ai-guided-analysis/html/
-huntr-ai-guided-analysis/elements/
-# Keep reports and decisions for tracking
-!huntr-ai-guided-analysis/reports/
-!huntr-ai-guided-analysis/ai-decisions.json
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Testing
-coverage/
-.nyc_output/
-test-results/
-playwright-report/
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Build outputs
 dist/
 build/
+.next/
+out/
 *.tsbuildinfo
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-.DS_Store
+*.sublime-*
 
-# AWS
-.aws/
-*.pem
+# Testing
+coverage/
+.nyc_output/
 
-# Terraform
-infrastructure/terraform/.terraform/
-infrastructure/terraform/*.tfstate
-infrastructure/terraform/*.tfstate.backup
-infrastructure/terraform/.terraform.lock.hcl
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
 
-# Browser Extension
-src/browser-extension/dist/
+# AI-generated analysis (large/transient)
+huntr-ai-guided-analysis/elements/*.json
+huntr-ai-guided-analysis/reports/
+huntr-ai-guided-analysis/action-log.json
+huntr-ai-guided-analysis/elements-database.json
+huntr-ai-guided-analysis/pages-database.json
+huntr-ai-guided-analysis/execution-errors.json
 
 # Temporary files
 tmp/
 temp/
 *.tmp
+run-output.log
+test-run.log
+
+# Chrome Extension builds
+apps/extension/dist/
+apps/extension/*.zip
+
+# Misc
+.cache/
+*.pid
+*.seed

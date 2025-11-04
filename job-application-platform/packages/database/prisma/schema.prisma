@@ -1,0 +1,456 @@
+// JobFlow Database Schema
+// Comprehensive schema for job application platform with AI learning
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USER & AUTH ====================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  password      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  profile       Profile?
+  applications  Application[]
+  recordings    Recording[]
+  patterns      AutomationPattern[]
+  jobs          Job[]
+  companies     Company[]
+  activities    Activity[]
+  aiInteractions AIInteraction[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ==================== USER PROFILE ====================
+
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Basic Info
+  firstName String
+  lastName  String
+  fullName  String
+  email     String
+  phone     String?
+  location  String?
+
+  // Professional Links
+  linkedinUrl String?
+  githubUrl   String?
+  portfolioUrl String?
+  websiteUrl  String?
+
+  // Work Authorization
+  workAuthorization String? // "US Citizen", "Green Card", "H1B", "Need Sponsorship"
+  willingToRelocate Boolean @default(false)
+
+  // Professional Info
+  yearsOfExperience Int?
+  currentJobTitle   String?
+  currentCompany    String?
+  desiredJobTitle   String?
+  desiredSalary     Int?
+  noticePeriod      String? // "Immediate", "2 weeks", "1 month", "2 months"
+
+  // Education
+  highestDegree     String? // "High School", "Associate", "Bachelor", "Master", "PhD"
+  fieldOfStudy      String?
+  university        String?
+  graduationYear    Int?
+
+  // Skills & Summary
+  skills            String[] // Array of skill strings
+  bio               String?  @db.Text
+  summary           String?  @db.Text
+
+  // Resume
+  resumeUrl         String?
+  resumeFileName    String?
+  coverLetterUrl    String?
+
+  // Preferences
+  preferredJobTypes String[] // "Full-time", "Part-time", "Contract", "Remote"
+  preferredLocations String[]
+  preferredIndustries String[]
+
+  // Relations
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workExperiences   WorkExperience[]
+  educationRecords  Education[]
+  projects          Project[]
+
+  @@map("profiles")
+}
+
+model WorkExperience {
+  id          String    @id @default(cuid())
+  profileId   String
+  company     String
+  title       String
+  location    String?
+  startDate   DateTime
+  endDate     DateTime?
+  isCurrent   Boolean   @default(false)
+  description String?   @db.Text
+  achievements String[] // Array of achievement strings
+  skills      String[]
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("work_experiences")
+}
+
+model Education {
+  id             String    @id @default(cuid())
+  profileId      String
+  institution    String
+  degree         String
+  fieldOfStudy   String
+  location       String?
+  startDate      DateTime
+  endDate        DateTime?
+  isCurrent      Boolean   @default(false)
+  gpa            Float?
+  achievements   String[]
+  order          Int       @default(0)
+  createdAt      DateTime  @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("education")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  profileId   String
+  name        String
+  description String   @db.Text
+  url         String?
+  githubUrl   String?
+  startDate   DateTime?
+  endDate     DateTime?
+  technologies String[]
+  highlights  String[]
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("projects")
+}
+
+// ==================== JOBS & APPLICATIONS ====================
+
+model Company {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  website     String?
+  careerPageUrl String?
+  logoUrl     String?
+  industry    String?
+  size        String?
+  location    String?
+  description String?  @db.Text
+  notes       String?  @db.Text
+  isFavorite  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs Job[]
+
+  @@map("companies")
+}
+
+model Job {
+  id          String   @id @default(cuid())
+  userId      String
+  companyId   String?
+  title       String
+  description String?  @db.Text
+  url         String
+  location    String?
+  salaryMin   Int?
+  salaryMax   Int?
+  employmentType String? // "Full-time", "Part-time", "Contract", "Remote"
+  experienceLevel String? // "Entry", "Mid", "Senior", "Lead", "Executive"
+  postedDate  DateTime?
+  deadline    DateTime?
+  source      String?  // "LinkedIn", "Indeed", "Company Website", "Manual"
+  isFavorite  Boolean  @default(false)
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company      Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  applications Application[]
+
+  @@map("jobs")
+}
+
+model Application {
+  id          String   @id @default(cuid())
+  userId      String
+  jobId       String?
+  status      String   @default("saved") // "saved", "applying", "applied", "interviewing", "offered", "rejected", "accepted", "withdrawn"
+  appliedDate DateTime?
+  source      String?  // "Extension", "Manual", "LinkedIn Easy Apply"
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Application Details
+  coverLetter String?  @db.Text
+  resumeUsed  String?
+  customAnswers Json?  // Store custom question answers
+
+  // Tracking
+  lastStatusChange DateTime @default(now())
+  followUpDate     DateTime?
+  rejectionReason  String?
+
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job        Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  interviews Interview[]
+  documents  Document[]
+  activities Activity[]
+
+  @@map("applications")
+}
+
+model Interview {
+  id            String    @id @default(cuid())
+  applicationId String
+  type          String    // "Phone Screen", "Technical", "Behavioral", "Onsite", "Final"
+  scheduledAt   DateTime?
+  duration      Int?      // minutes
+  location      String?
+  interviewerName String?
+  interviewerEmail String?
+  notes         String?   @db.Text
+  feedback      String?   @db.Text
+  status        String    @default("scheduled") // "scheduled", "completed", "cancelled", "rescheduled"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("interviews")
+}
+
+model Document {
+  id            String   @id @default(cuid())
+  applicationId String?
+  userId        String?
+  name          String
+  type          String   // "resume", "cover_letter", "transcript", "portfolio"
+  url           String
+  size          Int?
+  createdAt     DateTime @default(now())
+
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+
+  @@map("documents")
+}
+
+// ==================== AI LEARNING SYSTEM ====================
+
+model Recording {
+  id          String   @id @default(cuid())
+  userId      String
+  url         String
+  domain      String
+  pageTitle   String?
+  sessionId   String   @unique
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  duration    Int?     // seconds
+  success     Boolean?
+
+  // Recording metadata
+  userAgent   String?
+  viewport    Json?    // {width, height}
+
+  // Captured data
+  actions     Json     // Array of recorded actions
+  screenshots String[] // URLs to screenshots
+
+  // Analysis
+  analyzed    Boolean  @default(false)
+  analyzedAt  DateTime?
+  confidence  Float?   // 0-1 confidence score from AI
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  patterns AutomationPattern[]
+
+  @@index([userId, domain])
+  @@map("recordings")
+}
+
+model AutomationPattern {
+  id          String   @id @default(cuid())
+  userId      String
+  recordingId String?
+
+  // Pattern identification
+  name        String
+  domain      String
+  url         String?
+  formType    String?  // "application", "profile", "questionnaire"
+
+  // Pattern definition
+  steps       Json     // Array of automation steps
+  selectors   Json     // Selector strategies for each field
+
+  // Metadata
+  confidence  Float    @default(0)
+  successRate Float    @default(0)
+  timesUsed   Int      @default(0)
+  lastUsed    DateTime?
+
+  // AI Analysis
+  aiGenerated Boolean  @default(false)
+  aiModel     String?  // "claude-3.5-sonnet", etc.
+
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recording Recording? @relation(fields: [recordingId], references: [id], onDelete: SetNull)
+
+  @@index([userId, domain])
+  @@index([domain, isActive])
+  @@map("automation_patterns")
+}
+
+model AIInteraction {
+  id           String   @id @default(cuid())
+  userId       String
+  type         String   // "pattern_analysis", "cover_letter", "resume_review", "job_match"
+  input        Json     // Input data sent to AI
+  output       Json     // AI response
+  model        String   // "claude-3.5-sonnet", etc.
+  promptTokens Int?
+  outputTokens Int?
+  cost         Float?   // Estimated cost in USD
+  duration     Int?     // milliseconds
+  success      Boolean  @default(true)
+  error        String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@map("ai_interactions")
+}
+
+// ==================== ACTIVITY & ANALYTICS ====================
+
+model Activity {
+  id            String   @id @default(cuid())
+  userId        String
+  applicationId String?
+  type          String   // "status_change", "interview_scheduled", "note_added", "document_uploaded"
+  title         String
+  description   String?  @db.Text
+  metadata      Json?    // Additional context
+  createdAt     DateTime @default(now())
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@map("activities")
+}
+
+// ==================== CAREER PAGE SCRAPING ====================
+
+model ScrapedJob {
+  id              String   @id @default(cuid())
+  companyName     String
+  companyUrl      String
+  careerPageUrl   String
+  jobTitle        String
+  jobUrl          String   @unique
+  description     String?  @db.Text
+  location        String?
+  employmentType  String?
+  experienceLevel String?
+  postedDate      DateTime?
+  scrapedAt       DateTime @default(now())
+  isActive        Boolean  @default(true)
+
+  // Scraping metadata
+  scrapingMethod  String?  // "api", "playwright", "cheerio"
+  rawData         Json?    // Store original scraped data
+
+  @@index([companyUrl, isActive])
+  @@index([scrapedAt])
+  @@map("scraped_jobs")
+}

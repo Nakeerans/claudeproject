@@ -1,0 +1,32 @@
+{
+  "name": "job-application-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-powered job application platform with intelligent autofill",
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:web": "turbo run dev --filter=web",
+    "dev:api": "turbo run dev --filter=api",
+    "dev:extension": "turbo run dev --filter=extension",
+    "build": "turbo run build",
+    "build:web": "turbo run build --filter=web",
+    "build:api": "turbo run build --filter=api",
+    "build:extension": "turbo run build --filter=extension",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:migrate": "cd packages/database && pnpm prisma migrate dev",
+    "db:studio": "cd packages/database && pnpm prisma studio",
+    "db:seed": "cd packages/database && pnpm prisma db seed",
+    "db:reset": "cd packages/database && pnpm prisma migrate reset"
+  },
+  "devDependencies": {
+    "turbo": "^1.11.0",
+    "prettier": "^3.1.0",
+    "eslint": "^8.55.0"
+  },
+  "packageManager": "pnpm@8.0.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

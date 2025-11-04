@@ -1,0 +1,254 @@
+{
+  "config": {
+    "configFile": "/Users/nakeeransaravanan/Devops_practise/claudeproject/huntr-simple-playwright/playwright.config.ts",
+    "rootDir": "/Users/nakeeransaravanan/Devops_practise/claudeproject/huntr-simple-playwright",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "results/test-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/Users/nakeeransaravanan/Devops_practise/claudeproject/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/nakeeransaravanan/Devops_practise/claudeproject/huntr-simple-playwright",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 600000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.56.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "profile-builder-complete.spec.ts",
+      "file": "profile-builder-complete.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Huntr.co Profile Builder - Complete Coverage",
+          "file": "profile-builder-complete.spec.ts",
+          "line": 14,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Capture ALL Profile Builder sub-tabs including missing ones",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 600000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 51136,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "🔐 Logging in to Huntr.co...\n"
+                        },
+                        {
+                          "text": "  → Waiting for login form...\n"
+                        },
+                        {
+                          "text": "  → Entering email...\n"
+                        },
+                        {
+                          "text": "  → Entering password...\n"
+                        },
+                        {
+                          "text": "  → Submitting login form...\n"
+                        },
+                        {
+                          "text": "  ✓ Login successful!\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Basic Info (https://huntr.co/track/profile/builder/basic-info)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Preferences (https://huntr.co/track/profile/builder/preferences)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Experience (https://huntr.co/track/profile/builder/experience)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Volunteer Experience (https://huntr.co/track/profile/builder/volunteer-experience)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Certifications (https://huntr.co/track/profile/builder/certifications)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Education (https://huntr.co/track/profile/builder/education)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Projects (https://huntr.co/track/profile/builder/projects)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Links (https://huntr.co/track/profile/builder/links)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Documents (https://huntr.co/track/profile/builder/documents)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Custom Fields (https://huntr.co/track/profile/builder/custom-fields)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Autofill Fields (https://huntr.co/track/profile/builder/autofill-fields)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Skills (https://huntr.co/track/profile/builder/skills)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Languages (https://huntr.co/track/profile/builder/languages)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Awards (https://huntr.co/track/profile/builder/awards)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Publications (https://huntr.co/track/profile/builder/publications)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_References (https://huntr.co/track/profile/builder/references)\n"
+                        },
+                        {
+                          "text": "✓ Captured: Profile_Builder_Custom Sections (https://huntr.co/track/profile/builder/custom-sections)\n"
+                        },
+                        {
+                          "text": "\n✅ Completed: 17/17 Profile Builder sub-tabs\n"
+                        },
+                        {
+                          "text": "\n📊 Breakdown:\n"
+                        },
+                        {
+                          "text": "✅ Basic Info\n"
+                        },
+                        {
+                          "text": "✅ Preferences\n"
+                        },
+                        {
+                          "text": "✅ Experience\n"
+                        },
+                        {
+                          "text": "✅ Volunteer Experience\n"
+                        },
+                        {
+                          "text": "✅ Certifications\n"
+                        },
+                        {
+                          "text": "✅ Education\n"
+                        },
+                        {
+                          "text": "✅ Projects\n"
+                        },
+                        {
+                          "text": "✅ Links\n"
+                        },
+                        {
+                          "text": "✅ Documents\n"
+                        },
+                        {
+                          "text": "✅ Custom Fields\n"
+                        },
+                        {
+                          "text": "✅ Autofill Fields\n"
+                        },
+                        {
+                          "text": "✅ Skills\n"
+                        },
+                        {
+                          "text": "✅ Languages\n"
+                        },
+                        {
+                          "text": "✅ Awards\n"
+                        },
+                        {
+                          "text": "✅ Publications\n"
+                        },
+                        {
+                          "text": "✅ References\n"
+                        },
+                        {
+                          "text": "✅ Custom Sections\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-10-25T17:32:57.968Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/nakeeransaravanan/Devops_practise/claudeproject/test-results/profile-builder-complete-H-159c6-tabs-including-missing-ones-chromium/test-finished-1.png"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "bc7e6c775bd859281c8e-513ef3e52caec4ddfe86",
+              "file": "profile-builder-complete.spec.ts",
+              "line": 42,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-10-25T17:32:57.529Z",
+    "duration": 52720.154,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

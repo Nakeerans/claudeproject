@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Basic Info",
+    "url": "/track/profile/builder/basic-info",
+    "status": "success"
+  },
+  {
+    "name": "Education",
+    "url": "/track/profile/builder/education",
+    "status": "success"
+  },
+  {
+    "name": "Work Experience",
+    "url": "/track/profile/builder/work-experience",
+    "status": "success"
+  },
+  {
+    "name": "Volunteer Experience",
+    "url": "/track/profile/builder/volunteer-experience",
+    "status": "success"
+  },
+  {
+    "name": "Skills",
+    "url": "/track/profile/builder/skills",
+    "status": "success"
+  },
+  {
+    "name": "Certifications",
+    "url": "/track/profile/builder/certifications",
+    "status": "success"
+  },
+  {
+    "name": "Projects",
+    "url": "/track/profile/builder/projects",
+    "status": "success"
+  },
+  {
+    "name": "Publications",
+    "url": "/track/profile/builder/publications",
+    "status": "success"
+  },
+  {
+    "name": "Languages",
+    "url": "/track/profile/builder/languages",
+    "status": "success"
+  },
+  {
+    "name": "Awards",
+    "url": "/track/profile/builder/awards",
+    "status": "success"
+  },
+  {
+    "name": "References",
+    "url": "/track/profile/builder/references",
+    "status": "success"
+  },
+  {
+    "name": "Custom Sections",
+    "url": "/track/profile/builder/custom-sections",
+    "status": "success"
+  }
+]

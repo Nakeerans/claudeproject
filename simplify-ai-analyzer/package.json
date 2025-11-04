@@ -1,0 +1,17 @@
+{
+  "name": "simplify-ai-analyzer",
+  "version": "1.0.0",
+  "description": "AI-guided analyzer for Simplify.jobs platform",
+  "type": "module",
+  "main": "ai-guided-simplify-analyzer.js",
+  "scripts": {
+    "start": "node ai-guided-simplify-analyzer.js",
+    "analyze": "node ai-guided-simplify-analyzer.js"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0",
+    "@anthropic-ai/sdk": "^0.32.1"
+  },
+  "author": "",
+  "license": "MIT"
+}

@@ -38,7 +38,7 @@ const config = {
   headless: false,
   slowMo: 100, // Reduced from 500ms to 100ms for faster execution
   timeout: 15000, // Reduced from 30s to 15s
-  maxIterations: 25, // Increased from 10 to 25 for deeper feature exploration
+  maxIterations: 50, // Increased from 25 to 50 for deeper feature exploration and higher coverage
   claudeModel: 'claude-3-5-haiku-20241022' // Updated to latest Haiku model
 };
 
@@ -86,7 +86,11 @@ const aiState = {
   currentGoal: 'Explore and document all Huntr.co features systematically',
   explorationCoverage: 0,
   executionErrors: [], // NEW - Store all errors encountered during execution
-  actionLog: [] // NEW - Detailed log of all actions and outcomes
+  actionLog: [], // NEW - Detailed log of all actions and outcomes
+  stuckDetectionAttempts: [], // NEW - Track which sections were tried during stuck detection to prevent loops
+  clickedCards: new Set(), // NEW for Option 2 - Track which cards have been clicked to avoid duplicates
+  openedModals: new Set(), // NEW for Option 2 - Track which modals have been opened
+  clickedTabs: new Set() // NEW for Option 2 - Track which tabs have been clicked
 };
 
 async function setupDirectories() {
@@ -117,37 +121,13 @@ async function detectProtections(page) {
  */
 async function dismissPopupsAndModals(page) {
   try {
-    // Method 1: Dismiss Intercom chat launcher/widget
-    const intercomSelectors = [
-      '#intercom-container iframe', // Intercom iframe
-      '.intercom-lightweight-app-launcher', // Launcher button
-      '.intercom-launcher', // Alternative launcher
-      '[id*="intercom"]', // Any element with intercom in ID
-      'iframe[name*="intercom"]', // Intercom iframes
-      '.intercom-messenger-frame' // Messenger frame
-    ];
+    // Method 1: Press Escape key multiple times to dismiss modals
+    await page.keyboard.press('Escape').catch(() => {});
+    await humanDelay(200, 300);
+    await page.keyboard.press('Escape').catch(() => {});
+    await humanDelay(200, 300);
 
-    for (const selector of intercomSelectors) {
-      const element = await page.$(selector);
-      if (element) {
-        try {
-          // Hide the element completely
-          await page.evaluate((sel) => {
-            const el = document.querySelector(sel);
-            if (el) {
-              el.style.display = 'none';
-              el.style.visibility = 'hidden';
-              el.style.opacity = '0';
-              el.style.pointerEvents = 'none';
-            }
-          }, selector);
-        } catch (e) {
-          // Ignore errors for individual selectors
-        }
-      }
-    }
-
-    // Method 2: Close modal dialogs
+    // Method 2: Close modal dialogs with close buttons
     const modalCloseSelectors = [
       '[aria-label="Close"]',
       '[aria-label="close"]',
@@ -159,7 +139,9 @@ async function dismissPopupsAndModals(page) {
       'button:has-text("✕")',
       'button:has-text("×")',
       '.modal-close',
-      '[role="dialog"] button[aria-label="Close"]'
+      '[role="dialog"] button[aria-label="Close"]',
+      'button.Modal__CloseButton',
+      '[class*="Modal"] button[class*="close"]'
     ];
 
     for (const selector of modalCloseSelectors) {
@@ -169,29 +151,43 @@ async function dismissPopupsAndModals(page) {
         if (isVisible) {
           await closeBtn.click().catch(() => {});
           await humanDelay(300, 500);
+          await page.keyboard.press('Escape').catch(() => {});
+          await humanDelay(200, 300);
           break; // Only close one modal at a time
         }
       }
     }
 
-    // Method 3: Dismiss tooltips and popovers
-    await page.keyboard.press('Escape').catch(() => {});
-    await humanDelay(200, 300);
-
-    // Method 4: Hide any overlay elements that might block interaction
+    // Method 3: Hide modal containers and overlays using JavaScript
     await page.evaluate(() => {
-      // Find and hide overlay elements
-      const overlays = document.querySelectorAll('[class*="overlay"], [class*="Overlay"], [class*="backdrop"], [class*="Backdrop"]');
-      overlays.forEach(overlay => {
-        const style = window.getComputedStyle(overlay);
-        const zIndex = parseInt(style.zIndex) || 0;
-        // Only hide high z-index overlays (likely popups/modals)
-        if (zIndex > 1000) {
-          overlay.style.display = 'none';
-        }
+      // Find and hide modal containers
+      const modalSelectors = [
+        '[class*="Modal__Container"]',
+        '[class*="modal"]',
+        '[role="dialog"]',
+        '[class*="overlay"]',
+        '[class*="Overlay"]',
+        '[class*="backdrop"]',
+        '[class*="Backdrop"]'
+      ];
+
+      modalSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          const style = window.getComputedStyle(el);
+          const zIndex = parseInt(style.zIndex) || 0;
+          // Hide high z-index modals/overlays
+          if (zIndex > 1000 || selector.includes('Modal') || selector.includes('dialog')) {
+            el.style.display = 'none';
+            el.style.visibility = 'hidden';
+            el.style.opacity = '0';
+            el.style.pointerEvents = 'none';
+            el.style.zIndex = '-1';
+          }
+        });
       });
 
-      // Hide Intercom elements using more aggressive approach
+      // Hide Intercom elements
       const allElements = document.querySelectorAll('*');
       allElements.forEach(el => {
         const id = el.id || '';
@@ -324,6 +320,19 @@ async function capturePageState(page, pageName) {
       modals: Array.from(document.querySelectorAll('[role="dialog"], [class*="modal"]')).map(describeElement),
       dropdowns: Array.from(document.querySelectorAll('[role="listbox"], [class*="dropdown"]')).map(describeElement),
 
+      // Cards and clickable items for deeper exploration (NEW for Option 2)
+      cards: Array.from(document.querySelectorAll(
+        '[class*="Card"], [class*="card"], [class*="Item"], [class*="item"], ' +
+        '[class*="JobCard"], [class*="job-card"], [data-testid*="card"], ' +
+        '[role="listitem"], [class*="list-item"]'
+      )).filter(el => {
+        const rect = el.getBoundingClientRect();
+        // Only include visible elements with reasonable size
+        return rect.width > 100 && rect.height > 50 &&
+               window.getComputedStyle(el).display !== 'none' &&
+               window.getComputedStyle(el).visibility !== 'hidden';
+      }).map(describeElement),
+
       // Labels for better understanding
       labels: Array.from(document.querySelectorAll('label')).map(describeElement),
 
@@ -418,14 +427,14 @@ This is a setup/onboarding page. Complete it quickly:
     pageType = 'main_application';
     specificInstructions = `
 **MAIN APPLICATION:**
-Setup complete! Explore job tracking features DEEPLY:
-- Click navigation links to discover sections (Application Hub, Resume Builder, Contacts, etc.)
-- Interact with job boards, lists, cards
-- Try creating/adding items (jobs, contacts, notes)
-- Explore settings, profiles, user features
-- Test search, filters, sorting
-- IMPORTANT: Click items to open modals and details
-- AVOID: Upgrade/Pricing pages - focus on exploring FREE features available to users
+Setup complete! Use ONLY navigation links to discover pages:
+- ONLY click navigation links (<a> tags) to move between pages
+- DO NOT click buttons like "Create", "Add", "New", "Edit" - they open modals
+- Discover all sections: Application Hub, Resume Builder, Contacts, Companies, Documents, etc.
+- Find Settings, Profile, Boards, Metrics pages via navigation
+- Your goal: visit every unique page via navigation links
+- AVOID: Upgrade/Pricing pages and Chrome extension links
+- CRITICAL: Focus on page-to-page navigation, not element interactions
 `;
   } else if (url.includes('/settings') || url.includes('/profile')) {
     pageType = 'settings';
@@ -506,6 +515,11 @@ ${pageState.pageData.forms.map((form, i) =>
 **Headings:**
 ${pageState.pageData.headings.slice(0, 10).map(h => `- ${h.tag}: "${h.text}"`).join('\n')}
 
+**Cards/List Items (${pageState.pageData.cards.length}) [NEW - for deep exploration]:**
+${pageState.pageData.cards.slice(0, 10).map((card, i) =>
+  `${i + 1}. Text: "${card.text?.substring(0, 100)}", Classes: ${card.classes}, Visible: ${card.visible}, Selector: ${card.cssSelector}`
+).join('\n')}
+
 **SPECIAL SETUP ELEMENTS DETECTED:**
 ${pageState.pageData.setupElements.scratchOptions.length > 0 ? `
 ✓ Found "Start from Scratch" options (${pageState.pageData.setupElements.scratchOptions.length}):
@@ -534,33 +548,99 @@ ${pageState.htmlContent.substring(0, 2000)}
 **Previously Explored:**
 ${aiState.exploredPages.slice(-5).map(p => `- ${p.name} (${p.type})`).join('\n')}
 
+**EXECUTION FEEDBACK - FAILED ACTIONS (DO NOT RECOMMEND THESE AGAIN):**
+${(() => {
+  const recentFailures = aiState.actionLog.slice(-10).filter(a => !a.success);
+  const failureCounts = {};
+  recentFailures.forEach(f => {
+    const key = f.target;
+    failureCounts[key] = (failureCounts[key] || 0) + 1;
+  });
+  const uniqueFailures = Object.entries(failureCounts).map(([target, count]) =>
+    `- "${target}" (failed ${count} time${count > 1 ? 's' : ''} - link not found or not clickable)`
+  );
+  return uniqueFailures.length > 0 ? uniqueFailures.join('\n') : '- No recent failures';
+})()}
+
+**SUCCESSFULLY VISITED PAGES:**
+${aiState.exploredPages.filter(p => p.url).slice(-10).map(p => `- ${p.url}`).join('\n')}
+
 **Your Task:**
 Analyze this ${pageType} page and decide the BEST next actions for thorough exploration.
+**CRITICAL**: Do NOT recommend links that appear in the "FAILED ACTIONS" list above - they don't work!
 
-**PRIORITY RULES:**
-1. **NEVER repeat the same action twice** - check "Previously Explored" list carefully
-2. **AVOID Upgrade/Pricing pages** - skip any links/buttons related to upgrading, premium, or pricing
-3. **Prioritize unexplored navigation links** - discover new sections (boards, contacts, jobs, resumes, etc.)
-4. **Click on interactive elements** - buttons, cards, list items, modals (except upgrade-related)
-5. **Fill forms only when necessary** - to unlock features or complete workflows
-6. **Be thorough** - explore all visible UI elements systematically
+**EXPLORATION PHASE:** ${(() => {
+  const coverage = aiState.explorationCoverage;
+  if (coverage < 30) return 'Phase 1: Page Navigation (0-30%)';
+  if (coverage < 60) return 'Phase 2: Card/List Item Interaction (30-60%)';
+  if (coverage < 80) return 'Phase 3: Modal & Form Exploration (60-80%)';
+  if (coverage < 90) return 'Phase 4: Tab & View Mode Testing (80-90%)';
+  return 'Phase 5: Edge Cases & Hidden Features (90-100%)';
+})()}
+
+**PRIORITY RULES (Phase-Based):**
+${(() => {
+  const coverage = aiState.explorationCoverage;
+  if (coverage < 30) {
+    return `**Current Phase: Page Navigation**
+1. Navigate between pages using navigation links (anchor tags with href)
+2. Discover all main sections via sidebar/navigation
+3. AVOID: Modal buttons (Create, Add, New, Edit), Upgrade/Pricing pages
+4. Focus: Visit every unique page/section`;
+  }
+  if (coverage < 60) {
+    return `**Current Phase: Card/List Item Interaction**
+1. **HIGH PRIORITY**: Click into cards/list items to see detail views (use "click_card" action)
+2. Explore job applications, contacts, documents by clicking on them
+3. Continue navigating to unexplored pages
+4. AVOID: Modal buttons, Upgrade/Pricing pages
+5. Focus: Discover detail pages for all list items`;
+  }
+  if (coverage < 80) {
+    return `**Current Phase: Modal & Form Exploration**
+1. **HIGH PRIORITY**: Open modal dialogs (use "open_modal" action for Add/Create/New buttons)
+2. Click into remaining cards/list items
+3. Explore form creation flows
+4. AVOID: Upgrade/Pricing pages
+5. Focus: Capture all modal UIs and creation workflows`;
+  }
+  if (coverage < 90) {
+    return `**Current Phase: Tab & View Mode Testing**
+1. **HIGH PRIORITY**: Switch between tabs (use "click_tab" action)
+2. Test different view modes (Board/List/Calendar)
+3. Explore filter and sort options
+4. Open remaining modals
+5. Focus: Discover all content variations`;
+  }
+  return `**Current Phase: Edge Cases & Hidden Features**
+1. Test edge cases and rare UI states
+2. Explore any remaining unexplored elements
+3. Document all discovered features thoroughly
+4. Focus: Achieve 100% coverage`;
+})()}
 
 Respond in JSON format:
 {
   "analysis": "Detailed analysis - what is this page for? What can users do here?",
   "nextActions": [
     {
-      "type": "click|fill_form|navigate|wait",
-      "target": "CSS selector from element data above",
+      "type": "navigate" | "click_card" | "open_modal" | "click_tab",
+      "target": "CSS selector for element",
       "elementText": "Visible text of element",
-      "reason": "Why this action discovers new features",
+      "reason": "Why this action helps discover new features",
       "priority": 1-10
     }
   ],
   "discoveredFeatures": ["All features/UI components found on this page"],
-  "newGoal": "What to explore next",
+  "newGoal": "What to explore next based on current phase",
   "estimatedCoverage": 0-100
 }
+
+**ACTION TYPE USAGE:**
+- "navigate": For navigation links (<a> tags) - used in Phase 1
+- "click_card": For clicking into cards/list items to see details - used in Phase 2
+- "open_modal": For opening creation/edit modal dialogs - used in Phase 3
+- "click_tab": For switching between tabs - used in Phase 4
 
 **CRITICAL**: For the "target" field, ALWAYS provide the CSS selector from the element data listings above, NOT plain text!`;
 
@@ -710,7 +790,18 @@ async function executeAction(page, action) {
         // Method 1: Try as CSS selector (if it looks like one)
         if (action.target.includes('.') || action.target.includes('#') || action.target.includes('[')) {
           try {
-            const selectorElement = await page.$(action.target);
+            // Remove :contains() pseudo-selector - not supported by Playwright
+            let cleanSelector = action.target.replace(/:contains\(['"]([^'"]+)['"]\)/g, '');
+            // Remove [text='...'] attribute selector - use :has-text() instead
+            const textMatch = action.target.match(/\[text=['"]([^'"]+)['"]\]/);
+
+            if (textMatch) {
+              const text = textMatch[1];
+              cleanSelector = cleanSelector.replace(/\[text=['"][^'"]+['"]\]/, '');
+              cleanSelector = `${cleanSelector}:has-text("${text}")`;
+            }
+
+            const selectorElement = await page.$(cleanSelector);
             if (selectorElement) {
               const isVisible = await selectorElement.isVisible().catch(() => false);
               const isEnabled = await selectorElement.isEnabled().catch(() => true);
@@ -718,7 +809,7 @@ async function executeAction(page, action) {
               if (isVisible && isEnabled) {
                 await selectorElement.click();
                 await humanDelay(300, 500); // Reduced from 1000-2000ms
-                console.log(`  ✓ Clicked element with selector: ${action.target}`);
+                console.log(`  ✓ Clicked element with selector: ${cleanSelector}`);
                 actionLog.success = true;
                 actionLog.details.method = 'CSS selector';
                 actionLog.details.pageUrl = await page.url();
@@ -781,14 +872,166 @@ async function executeAction(page, action) {
         }
         break;
 
+      case 'click_card':
+        // NEW: Click into card/list item to see detail view
+        console.log(`    → Attempting to click card: ${action.target}`);
+
+        // Check if already clicked this card
+        const cardKey = `${action.target}-${action.elementText}`;
+        if (aiState.clickedCards.has(cardKey)) {
+          console.log(`  ⏭️  Already clicked this card, skipping`);
+          return false;
+        }
+
+        let card = null;
+
+        // Method 1: Try CSS selector
+        if (action.target.includes('[') || action.target.includes('.') || action.target.includes('#')) {
+          card = await page.$(action.target);
+        }
+
+        // Method 2: Try text search
+        if (!card) {
+          card = await page.$(`[class*="Card"]:has-text("${action.target}"), [class*="card"]:has-text("${action.target}")`);
+        }
+
+        // Method 3: Use element text
+        if (!card && action.elementText) {
+          card = await page.$(`[class*="Card"]:has-text("${action.elementText}"), [role="listitem"]:has-text("${action.elementText}")`);
+        }
+
+        if (card) {
+          const isVisible = await card.isVisible().catch(() => false);
+          if (isVisible) {
+            await card.click();
+            await page.waitForLoadState('domcontentloaded').catch(() => {});
+            await humanDelay(500, 800);
+            console.log(`  ✓ Clicked card: ${action.target}`);
+
+            // Track this card as clicked
+            aiState.clickedCards.add(cardKey);
+
+            actionLog.success = true;
+            actionLog.details.method = 'Card click';
+            actionLog.details.pageUrl = await page.url();
+            aiState.actionLog.push(actionLog);
+            return true;
+          }
+        }
+        break;
+
+      case 'open_modal':
+        // NEW: Open modal dialogs (Add, Create, New buttons)
+        console.log(`    → Attempting to open modal: ${action.target}`);
+
+        // Check if already opened this modal
+        const modalKey = `${action.target}-${action.elementText}`;
+        if (aiState.openedModals.has(modalKey)) {
+          console.log(`  ⏭️  Already opened this modal, skipping`);
+          return false;
+        }
+
+        let modalBtn = null;
+
+        // Method 1: Try CSS selector
+        if (action.target.includes('[') || action.target.includes('.') || action.target.includes('#')) {
+          modalBtn = await page.$(action.target);
+        }
+
+        // Method 2: Try common modal button patterns
+        if (!modalBtn) {
+          const modalSelectors = [
+            `button:has-text("${action.target}")`,
+            `button:has-text("Add")`,
+            `button:has-text("Create")`,
+            `button:has-text("New")`,
+            `[aria-label*="Add"]`,
+            `[aria-label*="Create"]`
+          ];
+
+          for (const selector of modalSelectors) {
+            modalBtn = await page.$(selector);
+            if (modalBtn) {
+              const isVisible = await modalBtn.isVisible().catch(() => false);
+              if (isVisible) break;
+              modalBtn = null;
+            }
+          }
+        }
+
+        if (modalBtn) {
+          const isVisible = await modalBtn.isVisible().catch(() => false);
+          const isEnabled = await modalBtn.isEnabled().catch(() => true);
+
+          if (isVisible && isEnabled) {
+            await modalBtn.click();
+            await humanDelay(1000, 1500);
+
+            // Verify modal opened
+            const modal = await page.$('[role="dialog"], [class*="Modal"], [class*="modal"]');
+            if (modal) {
+              console.log(`  ✓ Opened modal: ${action.target}`);
+
+              // Track this modal as opened
+              aiState.openedModals.add(modalKey);
+
+              actionLog.success = true;
+              actionLog.details.method = 'Modal open';
+              actionLog.details.modalFound = true;
+              aiState.actionLog.push(actionLog);
+              return true;
+            } else {
+              console.log(`  ⚠ Button clicked but no modal detected`);
+            }
+          }
+        }
+        break;
+
+      case 'click_tab':
       case 'switch_tab':
-        // Find and click tab
-        const tab = await page.$(`[role="tab"]:has-text("${action.target}"), [class*="tab"]:has-text("${action.target}")`);
+        // NEW/ENHANCED: Click tab to switch content
+        console.log(`    → Attempting to click tab: ${action.target}`);
+
+        // Check if already clicked this tab
+        const tabKey = `${action.target}-${action.elementText}`;
+        if (aiState.clickedTabs.has(tabKey)) {
+          console.log(`  ⏭️  Already clicked this tab, skipping`);
+          return false;
+        }
+
+        let tab = null;
+
+        // Method 1: Try CSS selector
+        if (action.target.includes('[') || action.target.includes('.') || action.target.includes('#')) {
+          tab = await page.$(action.target);
+        }
+
+        // Method 2: Try text search with role
+        if (!tab) {
+          tab = await page.$(`[role="tab"]:has-text("${action.target}"), [class*="tab"]:has-text("${action.target}")`);
+        }
+
+        // Method 3: Use element text
+        if (!tab && action.elementText) {
+          tab = await page.$(`[role="tab"]:has-text("${action.elementText}")`);
+        }
+
         if (tab) {
-          await tab.click();
-          await humanDelay(1000, 2000);
-          console.log(`  ✓ Switched to tab: ${action.target}`);
-          return true;
+          const isVisible = await tab.isVisible().catch(() => false);
+          if (isVisible) {
+            await tab.click();
+            await humanDelay(800, 1200);
+            console.log(`  ✓ Switched to tab: ${action.target}`);
+
+            // Track this tab as clicked
+            aiState.clickedTabs.add(tabKey);
+
+            actionLog.success = true;
+            actionLog.details.method = 'Tab click';
+            actionLog.details.pageUrl = await page.url();
+            aiState.actionLog.push(actionLog);
+            return true;
+          }
         }
         break;
 
@@ -1154,14 +1397,76 @@ async function aiGuidedAnalysis(credentials) {
 
       // STUCK DETECTION: Check if we've been on the same page for too long
       const currentUrl = pageState.pageData.url;
-      const recentPages = aiState.exploredPages.slice(-6); // Last 6 actions
+      const recentPages = aiState.exploredPages.slice(-8); // Last 8 actions
       const sameUrlActions = recentPages.filter(p => p.url === currentUrl).length;
 
-      if (sameUrlActions >= 4 && aiState.iteration > 5) {
-        console.log('\n⚠️  STUCK DETECTION: Been on same page for 4+ consecutive actions');
+      // Also check if we're repeating the same failed actions
+      const recentActions = aiState.actionLog.slice(-5);
+      const failedActions = recentActions.filter(a => !a.success).length;
+      const repeatingFailures = failedActions >= 4;
+
+      if ((sameUrlActions >= 5 && aiState.iteration > 5) || repeatingFailures) {
+        console.log('\n⚠️  STUCK DETECTION TRIGGERED:');
+        if (sameUrlActions >= 5) {
+          console.log(`    → Been on same URL for ${sameUrlActions} consecutive actions`);
+        }
+        if (repeatingFailures) {
+          console.log(`    → ${failedActions}/5 recent actions failed`);
+        }
         console.log(`    Current URL: ${currentUrl}`);
-        console.log('    → Forcing navigation to welcome page to break loop...');
-        await page.goto(`${config.baseUrl}/track/welcome`);
+        console.log('    → Forcing navigation to unexplored area to break loop...');
+
+        // Clean up old attempts (older than 5 iterations)
+        aiState.stuckDetectionAttempts = aiState.stuckDetectionAttempts.filter(attempt =>
+          aiState.iteration - attempt.iteration <= 5
+        );
+
+        // Try to find an unexplored section to navigate to
+        const unexploredSections = [
+          { url: '/track/settings', name: 'Settings' },
+          { url: '/track/profile', name: 'Profile' },
+          { url: '/track/companies', name: 'Companies' },
+          { url: '/track/contacts', name: 'Contacts' },
+          { url: '/track/documents', name: 'Documents' },
+          { url: '/track/metrics', name: 'Metrics' },
+          { url: '/track/boards', name: 'Boards' },
+          { url: '/track/activities', name: 'Activities' },
+          { url: '/track/welcome', name: 'Welcome' }
+        ];
+
+        let navigated = false;
+        for (const section of unexploredSections) {
+          // Check if visited OR recently attempted in stuck detection
+          const visited = aiState.exploredPages.some(p =>
+            p.url && p.url.includes(section.url)
+          );
+          const recentlyAttempted = aiState.stuckDetectionAttempts.some(a =>
+            a.url === section.url
+          );
+
+          if (!visited && !recentlyAttempted) {
+            console.log(`  → Navigating to unexplored: ${section.name}`);
+            aiState.stuckDetectionAttempts.push({
+              iteration: aiState.iteration,
+              url: section.url,
+              name: section.name
+            });
+            await dismissPopupsAndModals(page); // Dismiss before navigating
+            await page.goto(`${config.baseUrl}${section.url}`).catch(() => {});
+            navigated = true;
+            break;
+          } else if (recentlyAttempted) {
+            console.log(`  ⏭️  Skipping ${section.name} - recently attempted`);
+          }
+        }
+
+        // If all sections visited or attempted, go to welcome page
+        if (!navigated) {
+          console.log(`  → All sections visited or attempted, going to welcome page`);
+          await dismissPopupsAndModals(page);
+          await page.goto(`${config.baseUrl}/track/welcome`).catch(() => {});
+        }
+
         await humanDelay(2000, 3000);
         await dismissPopupsAndModals(page);
         continue; // Skip to next iteration
@@ -1186,24 +1491,77 @@ async function aiGuidedAnalysis(credentials) {
                                  action.elementText?.toLowerCase().includes('upgrade') ||
                                  action.elementText?.toLowerCase().includes('pricing');
 
-          // Skip previously explored actions
-          const alreadyExplored = aiState.exploredPages.some(p =>
+          // Skip Chrome extension links (external navigation)
+          const isChromeExtension = action.target?.includes('chrome.google.com') ||
+                                   action.target?.includes('webstore') ||
+                                   action.elementText?.toLowerCase().includes('extension') ||
+                                   action.elementText?.toLowerCase().includes('get the extension');
+
+          // Improved duplicate detection - check both target AND URL
+          const alreadyExplored = aiState.exploredPages.some(p => {
+            const sameAction = p.name === action.target && p.type === action.type;
+            const sameUrlContext = p.url === currentUrl;
+            return sameAction && sameUrlContext;
+          });
+
+          // Count how many times we've tried clicking this exact element
+          const clickCount = aiState.exploredPages.filter(p =>
             p.name === action.target && p.type === action.type
-          );
+          ).length;
+
+          // Skip if we've tried this action 3+ times already
+          const tooManyAttempts = clickCount >= 3;
 
           if (isUpgradeAction) {
             console.log(`  ⏭️  Skipping upgrade-related action: ${action.target}`);
           }
+          if (isChromeExtension) {
+            console.log(`  ⏭️  Skipping Chrome extension link: ${action.target}`);
+          }
           if (alreadyExplored) {
-            console.log(`  ⏭️  Skipping already explored: ${action.target} (${action.type})`);
+            console.log(`  ⏭️  Skipping already explored on this page: ${action.target} (${action.type})`);
+          }
+          if (tooManyAttempts) {
+            console.log(`  ⏭️  Skipping - attempted ${clickCount} times already: ${action.target}`);
           }
 
-          return !isUpgradeAction && !alreadyExplored;
+          return !isUpgradeAction && !isChromeExtension && !alreadyExplored && !tooManyAttempts;
         })
         .sort((a, b) => b.priority - a.priority)
         .slice(0, 5);
 
+      // If no valid actions remain, force navigate to an unexplored section
+      if (sortedActions.length === 0 && aiState.iteration < config.maxIterations) {
+        console.log('\n⚠️  No valid actions found - forcing navigation to unexplored area...');
+        const unexploredSections = [
+          { url: '/track/boards', name: 'Boards' },
+          { url: '/track/contacts', name: 'Contacts' },
+          { url: '/track/companies', name: 'Companies' },
+          { url: '/track/documents', name: 'Documents' },
+          { url: '/track/metrics', name: 'Metrics' },
+          { url: '/track/settings', name: 'Settings' },
+          { url: '/track/profile', name: 'Profile' }
+        ];
+
+        for (const section of unexploredSections) {
+          const visited = aiState.exploredPages.some(p =>
+            p.url && p.url.includes(section.url)
+          );
+          if (!visited) {
+            console.log(`  → Navigating to unexplored section: ${section.name}`);
+            await page.goto(`${config.baseUrl}${section.url}`).catch(() => {});
+            await humanDelay(1000, 1500);
+            await dismissPopupsAndModals(page);
+            continue; // Skip to next iteration
+          }
+        }
+      }
+
       for (const action of sortedActions) {
+        // CRITICAL: Dismiss modals BEFORE every action to prevent blocking
+        await dismissPopupsAndModals(page);
+        await humanDelay(200, 300);
+
         const success = await executeAction(page, action);
 
         if (success) {
@@ -1221,6 +1579,7 @@ async function aiGuidedAnalysis(credentials) {
           });
 
           await humanDelay(200, 400); // Reduced from 1000-2000ms
+          break; // CRITICAL FIX: Only execute ONE action per iteration to ensure each page is analyzed
         }
       }
     }
