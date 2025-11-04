@@ -74,3 +74,4 @@ apps/extension/*.zip
 *.pid
 *.seed
 .credentials
+chrome-extension-analyzer/extensions/
