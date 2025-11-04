@@ -73,3 +73,4 @@ apps/extension/*.zip
 .cache/
 *.pid
 *.seed
+.credentials
