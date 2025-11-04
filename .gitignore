@@ -75,3 +75,6 @@ apps/extension/*.zip
 *.seed
 .credentials
 chrome-extension-analyzer/extensions/
+
+# Helper scripts (local use only)
+push-to-github.sh
