@@ -49,6 +49,11 @@ jobs:
           compartment_ocid = "${{ secrets.TF_VAR_compartment_ocid }}"
           region           = "${{ secrets.TF_VAR_region }}"
 
+          # Instance Configuration - Free Tier
+          instance_shape         = "VM.Standard.E2.1.Micro"
+          instance_ocpus         = 1
+          instance_memory_in_gbs = 1
+
           # SSH Configuration
           generate_new_ssh_key = false
           ssh_public_key_path  = "${HOME}/.ssh/oci_instance_key.pub"
