@@ -28,15 +28,15 @@ jobs:
 
       - name: Configure OCI Credentials
         run: |
-          mkdir -p ~/.oci
-          echo "${{ secrets.OCI_API_PRIVATE_KEY }}" > ~/.oci/oci_api_key.pem
-          chmod 600 ~/.oci/oci_api_key.pem
+          mkdir -p $HOME/.oci
+          echo "${{ secrets.OCI_API_PRIVATE_KEY }}" > $HOME/.oci/oci_api_key.pem
+          chmod 600 $HOME/.oci/oci_api_key.pem
 
       - name: Generate SSH Keys
         run: |
-          mkdir -p ~/.ssh
-          ssh-keygen -t rsa -b 4096 -f ~/.ssh/oci_instance_key -N "" -C "github-actions"
-          ssh-keygen -t ed25519 -f ~/.ssh/github_deploy_key -N "" -C "github-deploy"
+          mkdir -p $HOME/.ssh
+          ssh-keygen -t rsa -b 4096 -f $HOME/.ssh/oci_instance_key -N "" -C "github-actions"
+          ssh-keygen -t ed25519 -f $HOME/.ssh/github_deploy_key -N "" -C "github-deploy"
 
       - name: Create terraform.tfvars
         working-directory: terraform
@@ -45,13 +45,13 @@ jobs:
           tenancy_ocid     = "${{ secrets.TF_VAR_tenancy_ocid }}"
           user_ocid        = "${{ secrets.TF_VAR_user_ocid }}"
           fingerprint      = "${{ secrets.TF_VAR_fingerprint }}"
-          private_key_path = "~/.oci/oci_api_key.pem"
+          private_key_path = "$HOME/.oci/oci_api_key.pem"
           compartment_ocid = "${{ secrets.TF_VAR_compartment_ocid }}"
           region           = "${{ secrets.TF_VAR_region }}"
 
           # SSH Configuration
           generate_new_ssh_key = false
-          ssh_public_key_path  = "~/.ssh/oci_instance_key.pub"
+          ssh_public_key_path  = "$HOME/.ssh/oci_instance_key.pub"
 
           # Optional
           anthropic_api_key = "${{ secrets.TF_VAR_anthropic_api_key }}"
@@ -94,7 +94,7 @@ jobs:
         id: ssh_keys
         run: |
           echo "SSH_PRIVATE_KEY<<EOF" >> $GITHUB_OUTPUT
-          cat ~/.ssh/oci_instance_key >> $GITHUB_OUTPUT
+          cat $HOME/.ssh/oci_instance_key >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Deployment Summary
@@ -117,7 +117,7 @@ jobs:
           echo ""
           echo "   # SSH Key (copy from below):"
           echo "   gh secret set OCI_SSH_PRIVATE_KEY <<'SSHKEY'"
-          cat ~/.ssh/oci_instance_key
+          cat $HOME/.ssh/oci_instance_key
           echo "   SSHKEY"
           echo ""
           echo "3. Push code to trigger deployment"
