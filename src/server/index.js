@@ -14,6 +14,7 @@ import contactRoutes from './routes/contacts.js';
 import interviewRoutes from './routes/interviews.js';
 import documentRoutes from './routes/documents.js';
 import analyticsRoutes from './routes/analytics.js';
+import aiRoutes from './routes/ai.js';
 import { authenticateToken } from './middleware/auth.js';
 
 dotenv.config();
@@ -57,6 +58,7 @@ app.use('/api/contacts', authenticateToken, contactRoutes);
 app.use('/api/interviews', authenticateToken, interviewRoutes);
 app.use('/api/documents', authenticateToken, documentRoutes);
 app.use('/api/analytics', authenticateToken, analyticsRoutes);
+app.use('/api/ai', authenticateToken, aiRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

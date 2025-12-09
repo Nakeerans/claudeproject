@@ -10,6 +10,7 @@ export default function Layout() {
     { name: 'Contacts', href: '/contacts', icon: '👥' },
     { name: 'Interviews', href: '/interviews', icon: '📅' },
     { name: 'Documents', href: '/documents', icon: '📄' },
+    { name: 'AI Tools', href: '/ai-tools', icon: '🤖' },
   ]
 
   return (

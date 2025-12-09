@@ -10,6 +10,7 @@ import Board from './pages/Board'
 import Contacts from './pages/Contacts'
 import Interviews from './pages/Interviews'
 import Documents from './pages/Documents'
+import AITools from './pages/AITools'
 import Layout from './components/Layout'
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
             <Route path="contacts" element={<Contacts />} />
             <Route path="interviews" element={<Interviews />} />
             <Route path="documents" element={<Documents />} />
+            <Route path="ai-tools" element={<AITools />} />
           </Route>
         </Routes>
       </Router>

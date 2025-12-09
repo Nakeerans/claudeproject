@@ -1,7 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-export default function JobCard({ job, onDelete }) {
+export default function JobCard({ job, onDelete, onViewDetails }) {
   const {
     attributes,
     listeners,
@@ -26,12 +26,21 @@ export default function JobCard({ job, onDelete }) {
 
   const salary = formatSalary(job.salaryMin, job.salaryMax)
 
+  const handleCardClick = (e) => {
+    // Don't trigger if clicking on delete button or dragging
+    if (e.target.closest('button') || isDragging) return
+    if (onViewDetails) {
+      onViewDetails(job.id)
+    }
+  }
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
+      onClick={handleCardClick}
       className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 cursor-move hover:shadow-md transition-shadow"
     >
       {/* Company & Title */}

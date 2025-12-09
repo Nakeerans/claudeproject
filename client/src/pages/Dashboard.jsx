@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import { format, parseISO } from 'date-fns'
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null)
+  const [timeline, setTimeline] = useState([])
+  const [activities, setActivities] = useState([])
+  const [upcomingInterviews, setUpcomingInterviews] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -11,8 +15,17 @@ export default function Dashboard() {
 
   const loadDashboard = async () => {
     try {
-      const response = await axios.get('/api/analytics/dashboard')
-      setStats(response.data)
+      const [statsRes, timelineRes, activitiesRes, interviewsRes] = await Promise.all([
+        axios.get('/api/analytics/dashboard'),
+        axios.get('/api/analytics/timeline?days=30'),
+        axios.get('/api/analytics/activities?limit=10'),
+        axios.get('/api/interviews?upcoming=true')
+      ])
+
+      setStats(statsRes.data)
+      setTimeline(timelineRes.data.timeline)
+      setActivities(activitiesRes.data.activities)
+      setUpcomingInterviews(interviewsRes.data.interviews.slice(0, 5))
     } catch (error) {
       console.error('Failed to load dashboard:', error)
     } finally {
@@ -56,36 +69,137 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Jobs by Stage */}
-      <div className="card p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Jobs by Stage</h2>
-        <div className="space-y-3">
-          {stats?.jobsByStage && Object.entries(stats.jobsByStage).map(([stage, count]) => (
-            <div key={stage} className="flex items-center justify-between">
-              <div className="flex items-center">
-                <span className={`inline-block w-3 h-3 rounded-full mr-3 ${getStageColor(stage)}`}></span>
-                <span className="text-gray-700">{formatStageName(stage)}</span>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Jobs by Stage */}
+        <div className="card p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Jobs by Stage</h2>
+          <div className="space-y-3">
+            {stats?.jobsByStage && Object.entries(stats.jobsByStage).map(([stage, count]) => (
+              <div key={stage} className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className={`inline-block w-3 h-3 rounded-full mr-3 ${getStageColor(stage)}`}></span>
+                  <span className="text-gray-700">{formatStageName(stage)}</span>
+                </div>
+                <span className="font-semibold text-gray-900">{count}</span>
               </div>
-              <span className="font-semibold text-gray-900">{count}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Response Rate */}
-      {stats?.responseRate !== undefined && (
-        <div className="card p-6 mt-6">
+        {/* Response Rate */}
+        <div className="card p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Response Rate</h2>
-          <div className="flex items-center">
-            <div className="text-4xl font-bold text-primary">{stats.responseRate}%</div>
-            <div className="ml-4 text-sm text-gray-600">
-              of applications lead to interviews
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="text-5xl font-bold text-primary mb-2">
+                {stats?.responseRate || 0}%
+              </div>
+              <div className="text-sm text-gray-600">
+                of applications lead to interviews
+              </div>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Application Timeline */}
+      {timeline.length > 0 && (
+        <div className="card p-6 mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Application Activity (Last 30 Days)</h2>
+          <div className="h-48 flex items-end space-x-1">
+            {timeline.slice(-30).map((day, idx) => {
+              const maxTotal = Math.max(...timeline.map(d => d.total), 1)
+              const height = (day.total / maxTotal) * 100
+              return (
+                <div
+                  key={idx}
+                  className="flex-1 bg-primary rounded-t hover:bg-primary-dark transition-colors relative group"
+                  style={{ height: `${Math.max(height, 2)}%` }}
+                  title={`${format(parseISO(day.date), 'MMM d')}: ${day.total} jobs`}
+                >
+                  <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                    {format(parseISO(day.date), 'MMM d')}: {day.total} jobs
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="mt-4 text-xs text-gray-500 text-center">
+            Total: {timeline.reduce((sum, day) => sum + day.total, 0)} jobs added in the last 30 days
+          </div>
+        </div>
       )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Upcoming Interviews */}
+        <div className="card p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Upcoming Interviews</h2>
+          {upcomingInterviews.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">No upcoming interviews</p>
+          ) : (
+            <div className="space-y-3">
+              {upcomingInterviews.map(interview => (
+                <div key={interview.id} className="border-l-4 border-primary pl-3 py-2">
+                  <div className="font-medium text-gray-900">
+                    {interview.job.companyName} - {interview.job.jobTitle}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {format(parseISO(interview.interviewDate), 'MMM d, yyyy h:mm a')}
+                  </div>
+                  <div className="text-xs text-gray-500 capitalize">
+                    {interview.interviewType.toLowerCase().replace('_', ' ')}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <a href="/interviews" className="text-primary hover:underline text-sm mt-4 inline-block">
+            View all interviews →
+          </a>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="card p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Activity</h2>
+          {activities.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">No recent activity</p>
+          ) : (
+            <div className="space-y-3 max-h-80 overflow-y-auto">
+              {activities.map(activity => (
+                <div key={activity.id} className="flex items-start space-x-2 text-sm">
+                  <span className="text-lg">{getActivityIcon(activity.activityType)}</span>
+                  <div className="flex-1">
+                    <p className="text-gray-900">{activity.description}</p>
+                    <p className="text-xs text-gray-500">
+                      {activity.job?.companyName} • {format(parseISO(activity.createdAt), 'MMM d, h:mm a')}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
+}
+
+function getActivityIcon(type) {
+  const icons = {
+    JOB_CREATED: '✨',
+    JOB_UPDATED: '✏️',
+    STAGE_CHANGED: '➡️',
+    APPLICATION_SUBMITTED: '📤',
+    INTERVIEW_SCHEDULED: '📅',
+    INTERVIEW_COMPLETED: '✅',
+    OFFER_RECEIVED: '🎉',
+    OFFER_ACCEPTED: '🤝',
+    OFFER_REJECTED: '❌',
+    NOTE_ADDED: '📝',
+    CONTACT_ADDED: '👤',
+    DOCUMENT_UPLOADED: '📄'
+  }
+  return icons[type] || '📌'
 }
 
 function StatCard({ title, value, icon, color }) {

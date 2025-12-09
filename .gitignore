@@ -78,3 +78,23 @@ chrome-extension-analyzer/extensions/
 
 # Helper scripts (local use only)
 push-to-github.sh
+
+# Uploads and user data
+uploads/*
+!uploads/.gitkeep
+
+# SSL certificates (NEVER commit these!)
+ssl/
+*.pem
+*.key
+*.crt
+
+# Backup files
+/opt/backups/
+*.sql
+*.sql.gz
+*.tar.gz
+
+# Docker volumes
+postgres_data/
+uploads_data/

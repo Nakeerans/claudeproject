@@ -4,6 +4,7 @@ import { DndContext, closestCorners, PointerSensor, useSensor, useSensors } from
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import JobCard from '../components/JobCard'
 import AddJobModal from '../components/AddJobModal'
+import JobDetailModal from '../components/JobDetailModal'
 
 const STAGES = [
   { id: 'WISHLIST', name: 'Wishlist', color: 'bg-gray-200' },
@@ -18,6 +19,9 @@ export default function Board() {
   const [loading, setLoading] = useState(true)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [selectedStage, setSelectedStage] = useState(null)
+  const [selectedJobId, setSelectedJobId] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterCompany, setFilterCompany] = useState('')
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -88,9 +92,39 @@ export default function Board() {
     }
   }
 
-  const getJobsByStage = (stage) => {
-    return jobs.filter(job => job.stage === stage)
+  const handleViewDetails = (jobId) => {
+    setSelectedJobId(jobId)
   }
+
+  const handleCloseDetails = () => {
+    setSelectedJobId(null)
+  }
+
+  const handleJobUpdated = () => {
+    loadJobs()
+  }
+
+  const handleJobDeleted = (jobId) => {
+    setJobs(prev => prev.filter(job => job.id !== jobId))
+  }
+
+  const filteredJobs = jobs.filter(job => {
+    const matchesSearch = searchTerm === '' ||
+      job.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (job.location && job.location.toLowerCase().includes(searchTerm.toLowerCase()))
+
+    const matchesCompany = filterCompany === '' ||
+      job.companyName.toLowerCase().includes(filterCompany.toLowerCase())
+
+    return matchesSearch && matchesCompany
+  })
+
+  const getJobsByStage = (stage) => {
+    return filteredJobs.filter(job => job.stage === stage)
+  }
+
+  const uniqueCompanies = [...new Set(jobs.map(job => job.companyName))].sort()
 
   if (loading) {
     return (
@@ -112,6 +146,42 @@ export default function Board() {
         </button>
       </div>
 
+      {/* Search and Filter */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="Search jobs by company, title, or location..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="input w-full"
+          />
+        </div>
+        <div className="w-full sm:w-64">
+          <select
+            value={filterCompany}
+            onChange={(e) => setFilterCompany(e.target.value)}
+            className="input w-full"
+          >
+            <option value="">All Companies</option>
+            {uniqueCompanies.map(company => (
+              <option key={company} value={company}>{company}</option>
+            ))}
+          </select>
+        </div>
+        {(searchTerm || filterCompany) && (
+          <button
+            onClick={() => {
+              setSearchTerm('')
+              setFilterCompany('')
+            }}
+            className="btn btn-secondary"
+          >
+            Clear Filters
+          </button>
+        )}
+      </div>
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -125,6 +195,7 @@ export default function Board() {
               jobs={getJobsByStage(stage.id)}
               onAddJob={() => handleAddJob(stage.id)}
               onDeleteJob={handleDeleteJob}
+              onViewDetails={handleViewDetails}
             />
           ))}
         </div>
@@ -137,11 +208,20 @@ export default function Board() {
           onJobCreated={handleJobCreated}
         />
       )}
+
+      {selectedJobId && (
+        <JobDetailModal
+          jobId={selectedJobId}
+          onClose={handleCloseDetails}
+          onJobUpdated={handleJobUpdated}
+          onJobDeleted={handleJobDeleted}
+        />
+      )}
     </div>
   )
 }
 
-function Column({ stage, jobs, onAddJob, onDeleteJob }) {
+function Column({ stage, jobs, onAddJob, onDeleteJob, onViewDetails }) {
   const jobIds = jobs.map(job => job.id)
 
   return (
@@ -172,6 +252,7 @@ function Column({ stage, jobs, onAddJob, onDeleteJob }) {
                 key={job.id}
                 job={job}
                 onDelete={onDeleteJob}
+                onViewDetails={onViewDetails}
               />
             ))
           )}
