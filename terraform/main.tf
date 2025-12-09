@@ -218,10 +218,13 @@ resource "oci_core_instance" "jobtracker_instance" {
   display_name        = var.instance_name
   shape               = var.instance_shape
 
-  # Shape configuration for Flex shapes
-  shape_config {
-    ocpus         = var.instance_ocpus
-    memory_in_gbs = var.instance_memory_in_gbs
+  # Shape configuration for Flex shapes only (not for free tier Micro)
+  dynamic "shape_config" {
+    for_each = contains(["VM.Standard.E4.Flex", "VM.Standard.E3.Flex", "VM.Standard.A1.Flex"], var.instance_shape) ? [1] : []
+    content {
+      ocpus         = var.instance_ocpus
+      memory_in_gbs = var.instance_memory_in_gbs
+    }
   }
 
   # Source details
