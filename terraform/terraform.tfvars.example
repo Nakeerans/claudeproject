@@ -1,0 +1,79 @@
+# Terraform Variables Configuration
+# Copy this file to terraform.tfvars and fill in your actual values
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# REQUIRED: OCI Authentication
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Get these from: OCI Console → User (top right) → User Settings
+tenancy_ocid = "ocid1.tenancy.oc1..aaaaaaaaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+user_ocid    = "ocid1.user.oc1..aaaaaaaaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+fingerprint  = "xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx"
+
+# Path to your OCI API private key
+# Generate with: oci setup config
+private_key_path = "~/.oci/oci_api_key.pem"
+
+# OCI Region (e.g., us-ashburn-1, us-phoenix-1, eu-frankfurt-1)
+region = "us-ashburn-1"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# REQUIRED: Compartment
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Get from: OCI Console → Identity → Compartments
+compartment_ocid = "ocid1.compartment.oc1..aaaaaaaaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# OPTIONAL: Instance Configuration
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+instance_name   = "jobtracker-app"
+instance_shape  = "VM.Standard.E4.Flex"
+instance_ocpus  = 2
+instance_memory_in_gbs = 8
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# OPTIONAL: SSH Configuration
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Generate new SSH key automatically (recommended)
+generate_new_ssh_key = true
+
+# Or provide your own SSH public key path
+# ssh_public_key_path = "~/.ssh/id_rsa.pub"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# OPTIONAL: Application Configuration
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+github_repository = "https://github.com/Nakeerans/claudeproject.git"
+
+# For private repositories, provide a personal access token
+# github_token = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Your Anthropic API key for AI features
+# Get from: https://console.anthropic.com/
+# anthropic_api_key = "sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# OPTIONAL: Cloud-Init
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Use cloud-init for automatic server setup
+use_cloud_init = true
+
+# Which cloud-init script to use
+# Options: "../cloud-init/basic-setup.yml" or "../cloud-init/full-setup.yml"
+cloud_init_script = "../cloud-init/full-setup.yml"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# OPTIONAL: Tags
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+tags = {
+  "Project"     = "JobTracker"
+  "Environment" = "Production"
+  "ManagedBy"   = "Terraform"
+  "CreatedBy"   = "YourName"
+}
