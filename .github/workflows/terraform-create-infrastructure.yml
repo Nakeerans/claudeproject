@@ -32,6 +32,12 @@ jobs:
           echo "${{ secrets.OCI_API_PRIVATE_KEY }}" > ~/.oci/oci_api_key.pem
           chmod 600 ~/.oci/oci_api_key.pem
 
+      - name: Generate SSH Keys
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keygen -t rsa -b 4096 -f ~/.ssh/oci_instance_key -N "" -C "github-actions"
+          ssh-keygen -t ed25519 -f ~/.ssh/github_deploy_key -N "" -C "github-deploy"
+
       - name: Create terraform.tfvars
         working-directory: terraform
         run: |
@@ -42,6 +48,10 @@ jobs:
           private_key_path = "~/.oci/oci_api_key.pem"
           compartment_ocid = "${{ secrets.TF_VAR_compartment_ocid }}"
           region           = "${{ secrets.TF_VAR_region }}"
+
+          # SSH Configuration
+          generate_new_ssh_key = false
+          ssh_public_key_path  = "~/.ssh/oci_instance_key.pub"
 
           # Optional
           anthropic_api_key = "${{ secrets.TF_VAR_anthropic_api_key }}"
@@ -79,12 +89,13 @@ jobs:
           echo "ip=$INSTANCE_IP" >> $GITHUB_OUTPUT
           echo "Instance IP: $INSTANCE_IP"
 
-      - name: Save SSH Key
+      - name: Output SSH Keys
         if: github.event.inputs.action == 'apply'
-        working-directory: terraform
+        id: ssh_keys
         run: |
-          terraform output -raw github_deploy_private_key_path
-          # Display path to SSH key for next steps
+          echo "SSH_PRIVATE_KEY<<EOF" >> $GITHUB_OUTPUT
+          cat ~/.ssh/oci_instance_key >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Deployment Summary
         if: github.event.inputs.action == 'apply'
@@ -97,11 +108,18 @@ jobs:
           echo ""
           echo "Next Steps:"
           echo "1. Wait 10-15 minutes for cloud-init to complete"
-          echo "2. Add these GitHub secrets for auto-deploy:"
-          echo "   - OCI_HOST: ${{ steps.instance_ip.outputs.ip }}"
-          echo "   - OCI_USER: opc"
-          echo "   - PRODUCTION_URL: ${{ steps.instance_ip.outputs.ip }}"
-          echo "   - OCI_SSH_PRIVATE_KEY: (from Terraform outputs)"
+          echo ""
+          echo "2. Add these GitHub secrets (via CLI):"
+          echo ""
+          echo "   echo '${{ steps.instance_ip.outputs.ip }}' | gh secret set OCI_HOST"
+          echo "   echo 'opc' | gh secret set OCI_USER"
+          echo "   echo '${{ steps.instance_ip.outputs.ip }}' | gh secret set PRODUCTION_URL"
+          echo ""
+          echo "   # SSH Key (copy from below):"
+          echo "   gh secret set OCI_SSH_PRIVATE_KEY <<'SSHKEY'"
+          cat ~/.ssh/oci_instance_key
+          echo "   SSHKEY"
+          echo ""
           echo "3. Push code to trigger deployment"
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
