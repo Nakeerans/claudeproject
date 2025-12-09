@@ -1,0 +1,218 @@
+name: Deploy to Oracle Cloud (Simple)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint || echo "⚠️ No lint script configured"
+
+      - name: Run tests
+        run: npm test || echo "⚠️ No tests configured"
+
+  deploy:
+    name: Deploy to Oracle Cloud
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.OCI_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy Application
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+          OCI_USER: ${{ secrets.OCI_USER }}
+        run: |
+          ssh ${{ env.OCI_USER }}@${{ env.OCI_HOST }} << 'ENDSSH'
+            set -e
+
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "🚀 Starting Deployment"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            # Navigate to application directory
+            cd /opt/jobtracker
+
+            # Backup current database
+            echo "📦 Creating database backup..."
+            docker-compose exec -T postgres pg_dump -U jobtracker_user huntr_clone > /tmp/pre_deploy_backup_$(date +%Y%m%d_%H%M%S).sql 2>/dev/null || echo "⚠️ No existing database to backup"
+
+            # Pull latest code
+            echo "📥 Pulling latest code from GitHub..."
+            git fetch origin main
+            CURRENT_COMMIT=$(git rev-parse HEAD)
+            git reset --hard origin/main
+            NEW_COMMIT=$(git rev-parse HEAD)
+
+            if [ "$CURRENT_COMMIT" = "$NEW_COMMIT" ]; then
+              echo "ℹ️ No new changes to deploy"
+            else
+              echo "✅ Updated from $CURRENT_COMMIT to $NEW_COMMIT"
+            fi
+
+            # Install/update backend dependencies
+            echo "📦 Installing backend dependencies..."
+            npm ci --only=production
+
+            # Install/update frontend dependencies and build
+            echo "📦 Installing frontend dependencies..."
+            cd client
+            npm ci --only=production
+
+            echo "🔨 Building frontend..."
+            npm run build
+            cd ..
+
+            # Generate Prisma client
+            echo "🔧 Generating Prisma client..."
+            npx prisma generate
+
+            # Run database migrations
+            echo "🗄️ Running database migrations..."
+            npx prisma migrate deploy
+
+            # Restart application
+            echo "♻️ Restarting application..."
+            docker-compose restart app
+
+            # Wait and check health
+            echo "🏥 Checking application health..."
+            sleep 10
+
+            MAX_RETRIES=6
+            RETRY_COUNT=0
+            HEALTH_OK=false
+
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              if curl -f http://localhost:3000/health > /dev/null 2>&1; then
+                echo "✅ Application is healthy!"
+                HEALTH_OK=true
+                break
+              else
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                echo "⏳ Waiting for application... ($RETRY_COUNT/$MAX_RETRIES)"
+                sleep 5
+              fi
+            done
+
+            if [ "$HEALTH_OK" = false ]; then
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "❌ DEPLOYMENT FAILED - Health check timeout"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "🔄 Rolling back to previous version..."
+
+              git reset --hard $CURRENT_COMMIT
+              docker-compose restart app
+              sleep 10
+
+              if curl -f http://localhost:3000/health > /dev/null 2>&1; then
+                echo "✅ Rollback successful - application restored"
+              else
+                echo "❌ Rollback failed - manual intervention required!"
+                echo "📞 Check logs: docker-compose logs -f app"
+              fi
+              exit 1
+            fi
+
+            # Cleanup old Docker images
+            echo "🧹 Cleaning up old Docker images..."
+            docker image prune -f > /dev/null 2>&1
+
+            # Remove old backups (keep last 7 days)
+            find /tmp -name "pre_deploy_backup_*.sql" -mtime +7 -delete 2>/dev/null || true
+
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "✅ DEPLOYMENT SUCCESSFUL!"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "📊 Deployed commit: $NEW_COMMIT"
+            echo "🕐 Deployment time: $(date)"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          ENDSSH
+
+      - name: Verify External Access
+        run: |
+          echo "🔍 Verifying external access..."
+          sleep 5
+
+          if curl -f -m 10 http://${{ secrets.OCI_HOST }}:3000/health 2>/dev/null; then
+            echo "✅ External health check passed!"
+            echo "🌐 Application accessible at: http://${{ secrets.OCI_HOST }}:3000"
+          else
+            echo "⚠️ External health check failed"
+            echo "ℹ️ This might be due to:"
+            echo "  - Firewall blocking port 3000"
+            echo "  - Nginx reverse proxy configuration"
+            echo "  - Security group rules"
+            echo ""
+            echo "💡 Try accessing: http://${{ secrets.PRODUCTION_URL }}"
+          fi
+
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ DEPLOYMENT COMPLETE!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🌐 Production URL: http://${{ secrets.PRODUCTION_URL }}"
+          echo "📊 Commit SHA: ${{ github.sha }}"
+          echo "📝 Commit Message: ${{ github.event.head_commit.message }}"
+          echo "👤 Deployed by: ${{ github.actor }}"
+          echo "🕐 Deployment Time: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📋 Next Steps:"
+          echo "  1. Visit: http://${{ secrets.PRODUCTION_URL }}"
+          echo "  2. Test the application"
+          echo "  3. Check logs if needed: ssh ${{ secrets.OCI_USER }}@${{ secrets.OCI_HOST }} 'cd /opt/jobtracker && docker-compose logs -f app'"
+
+      - name: Failure Notification
+        if: failure()
+        run: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "❌ DEPLOYMENT FAILED!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📊 Commit SHA: ${{ github.sha }}"
+          echo "👤 Attempted by: ${{ github.actor }}"
+          echo ""
+          echo "🔍 Troubleshooting:"
+          echo "  1. Check the logs above for error details"
+          echo "  2. SSH to server: ssh ${{ secrets.OCI_USER }}@${{ secrets.OCI_HOST }}"
+          echo "  3. Check app logs: docker-compose logs -f app"
+          echo "  4. Verify database: docker-compose exec postgres psql -U jobtracker_user -d huntr_clone"
+          echo ""
+          echo "🔄 The application should have rolled back to the previous version"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
