@@ -1,0 +1,123 @@
+#cloud-config
+# Job Tracker - Basic Oracle Cloud Instance Setup
+# This script runs automatically when the instance is created
+# It installs Docker, Docker Compose, Git, and sets up the server
+
+# Update package list and upgrade existing packages
+package_update: true
+package_upgrade: true
+
+# Install required packages
+packages:
+  - git
+  - curl
+  - wget
+  - vim
+  - htop
+  - unzip
+  - ca-certificates
+  - gnupg
+  - lsb-release
+
+# Write configuration files
+write_files:
+  # Create application directory structure
+  - path: /opt/jobtracker/.gitkeep
+    content: |
+      # Application directory for Job Tracker
+    permissions: '0644'
+    owner: opc:opc
+
+  # Create uploads directory
+  - path: /opt/jobtracker/uploads/.gitkeep
+    content: |
+      # Uploaded files directory
+    permissions: '0755'
+    owner: opc:opc
+
+  # Create backups directory
+  - path: /opt/backups/.gitkeep
+    content: |
+      # Database backups directory
+    permissions: '0755'
+    owner: opc:opc
+
+  # Docker daemon configuration for better performance
+  - path: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      }
+    permissions: '0644'
+
+# Run commands to set up the server
+runcmd:
+  # Update firewall for Oracle Linux
+  - sudo firewall-cmd --permanent --add-service=http
+  - sudo firewall-cmd --permanent --add-service=https
+  - sudo firewall-cmd --permanent --add-port=3000/tcp
+  - sudo firewall-cmd --reload
+
+  # Install Docker
+  - curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+  - sh /tmp/get-docker.sh
+  - rm /tmp/get-docker.sh
+
+  # Install Docker Compose
+  - sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+  - sudo chmod +x /usr/local/bin/docker-compose
+  - sudo ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+
+  # Add opc user to docker group
+  - sudo usermod -aG docker opc
+
+  # Start and enable Docker service
+  - sudo systemctl start docker
+  - sudo systemctl enable docker
+
+  # Set ownership of application directories
+  - sudo chown -R opc:opc /opt/jobtracker
+  - sudo chown -R opc:opc /opt/backups
+
+  # Create swap space (2GB) for better performance
+  - sudo dd if=/dev/zero of=/swapfile bs=1G count=2
+  - sudo chmod 600 /swapfile
+  - sudo mkswap /swapfile
+  - sudo swapon /swapfile
+  - echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+  # Configure Git
+  - sudo -u opc git config --global pull.rebase false
+  - sudo -u opc git config --global user.name "Server Deployment"
+  - sudo -u opc git config --global user.email "deploy@server"
+
+  # Clean up
+  - sudo yum clean all
+
+# Final message
+final_message: |
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✅ Job Tracker Server Setup Complete!
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Instance is ready for deployment!
+
+  Installed:
+  - ✅ Docker
+  - ✅ Docker Compose
+  - ✅ Git
+  - ✅ Firewall configured
+  - ✅ Application directories created
+  - ✅ Swap space configured
+
+  Next steps:
+  1. SSH to this instance
+  2. Clone your repository to /opt/jobtracker
+  3. Run the deployment
+
+  Setup time: $UPTIME
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

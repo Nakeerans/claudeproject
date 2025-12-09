@@ -1,0 +1,352 @@
+#cloud-config
+# Job Tracker - Complete Oracle Cloud Instance Setup
+# This script fully configures the server and prepares it for immediate deployment
+# IMPORTANT: Update the GITHUB_REPO variable below with your repository URL
+
+# Update package list and upgrade existing packages
+package_update: true
+package_upgrade: true
+
+# Install required packages
+packages:
+  - git
+  - curl
+  - wget
+  - vim
+  - nano
+  - htop
+  - unzip
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - postgresql-client
+
+# Write configuration files
+write_files:
+  # Environment template for the application
+  - path: /opt/jobtracker/.env.template
+    content: |
+      # Job Tracker Environment Configuration
+      # Copy this to .env and update with your actual values
+
+      # Database Configuration
+      DB_NAME=huntr_clone
+      DB_USER=jobtracker_user
+      DB_PASSWORD=CHANGE_ME_GENERATE_STRONG_PASSWORD
+      DB_PORT=5432
+
+      # Application Configuration
+      NODE_ENV=production
+      APP_PORT=3000
+      CLIENT_URL=http://YOUR_SERVER_IP_OR_DOMAIN
+      LOG_LEVEL=info
+
+      # Authentication Secrets (MUST CHANGE - Generate with: openssl rand -base64 32)
+      JWT_SECRET=CHANGE_ME_RANDOM_STRING
+      SESSION_SECRET=CHANGE_ME_RANDOM_STRING
+
+      # AI Features - Anthropic Claude API
+      ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+      # Optional: Google OAuth
+      GOOGLE_CLIENT_ID=
+      GOOGLE_CLIENT_SECRET=
+      GOOGLE_CALLBACK_URL=
+
+      # Optional: AWS S3 Storage
+      AWS_REGION=
+      AWS_ACCESS_KEY_ID=
+      AWS_SECRET_ACCESS_KEY=
+      AWS_S3_BUCKET=
+    permissions: '0644'
+    owner: opc:opc
+
+  # Docker daemon configuration
+  - path: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        },
+        "storage-driver": "overlay2"
+      }
+    permissions: '0644'
+
+  # Setup completion script
+  - path: /opt/scripts/complete-setup.sh
+    content: |
+      #!/bin/bash
+      # Complete deployment setup script
+
+      set -e
+
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo "Completing Job Tracker Setup"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      cd /opt/jobtracker
+
+      # Generate secure secrets
+      echo "Generating secure secrets..."
+      JWT_SECRET=$(openssl rand -base64 32)
+      SESSION_SECRET=$(openssl rand -base64 32)
+      DB_PASSWORD=$(openssl rand -base64 24 | tr -d "=+/" | cut -c1-20)
+
+      # Create .env file from template
+      cp .env.template .env
+
+      # Update with generated secrets
+      sed -i "s|JWT_SECRET=CHANGE_ME_RANDOM_STRING|JWT_SECRET=$JWT_SECRET|g" .env
+      sed -i "s|SESSION_SECRET=CHANGE_ME_RANDOM_STRING|SESSION_SECRET=$SESSION_SECRET|g" .env
+      sed -i "s|DB_PASSWORD=CHANGE_ME_GENERATE_STRONG_PASSWORD|DB_PASSWORD=$DB_PASSWORD|g" .env
+
+      # Get server IP and update CLIENT_URL
+      SERVER_IP=$(curl -s http://169.254.169.254/opc/v1/instance/metadata/public-ip || echo "localhost")
+      sed -i "s|CLIENT_URL=http://YOUR_SERVER_IP_OR_DOMAIN|CLIENT_URL=http://$SERVER_IP|g" .env
+
+      echo "✅ Environment configured"
+      echo ""
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo "⚠️  IMPORTANT: Next Steps"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo ""
+      echo "1. Edit /opt/jobtracker/.env and add:"
+      echo "   - ANTHROPIC_API_KEY (required for AI features)"
+      echo "   - Other optional credentials"
+      echo ""
+      echo "2. Start the application:"
+      echo "   cd /opt/jobtracker"
+      echo "   docker-compose up -d"
+      echo ""
+      echo "3. Your application will be available at:"
+      echo "   http://$SERVER_IP:3000"
+      echo ""
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    permissions: '0755'
+    owner: opc:opc
+
+  # Server information display script
+  - path: /opt/scripts/server-info.sh
+    content: |
+      #!/bin/bash
+      # Display server information
+
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo "Job Tracker Server Information"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo ""
+      echo "Public IP: $(curl -s http://169.254.169.254/opc/v1/instance/metadata/public-ip || echo 'Not available')"
+      echo "Hostname: $(hostname)"
+      echo ""
+      echo "Docker Version: $(docker --version 2>/dev/null || echo 'Not installed')"
+      echo "Docker Compose: $(docker-compose --version 2>/dev/null || echo 'Not installed')"
+      echo "Git Version: $(git --version 2>/dev/null || echo 'Not installed')"
+      echo ""
+      echo "Application Directory: /opt/jobtracker"
+      echo "Backup Directory: /opt/backups"
+      echo ""
+      echo "Firewall Status:"
+      sudo firewall-cmd --list-all | grep -E "(services|ports)"
+      echo ""
+      echo "Disk Usage:"
+      df -h / | tail -1
+      echo ""
+      echo "Memory:"
+      free -h | grep Mem
+      echo ""
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    permissions: '0755'
+    owner: opc:opc
+
+# Run commands to set up the server
+runcmd:
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # System Configuration
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  # Configure firewall (Oracle Linux)
+  - sudo firewall-cmd --permanent --add-service=http
+  - sudo firewall-cmd --permanent --add-service=https
+  - sudo firewall-cmd --permanent --add-port=3000/tcp
+  - sudo firewall-cmd --permanent --add-port=5432/tcp
+  - sudo firewall-cmd --reload
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Install Docker
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+  - sh /tmp/get-docker.sh
+  - rm /tmp/get-docker.sh
+  - sudo systemctl start docker
+  - sudo systemctl enable docker
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Install Docker Compose
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+  - sudo chmod +x /usr/local/bin/docker-compose
+  - sudo ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # User Configuration
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - sudo usermod -aG docker opc
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Create Directories
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - sudo mkdir -p /opt/jobtracker/uploads
+  - sudo mkdir -p /opt/jobtracker/ssl
+  - sudo mkdir -p /opt/backups
+  - sudo mkdir -p /opt/scripts
+  - sudo mkdir -p /var/log/jobtracker
+  - sudo chown -R opc:opc /opt/jobtracker
+  - sudo chown -R opc:opc /opt/backups
+  - sudo chown -R opc:opc /opt/scripts
+  - sudo chown -R opc:opc /var/log/jobtracker
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Configure Swap Space (2GB)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - sudo dd if=/dev/zero of=/swapfile bs=1G count=2
+  - sudo chmod 600 /swapfile
+  - sudo mkswap /swapfile
+  - sudo swapon /swapfile
+  - echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Configure Git
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - sudo -u opc git config --global pull.rebase false
+  - sudo -u opc git config --global user.name "Server Deployment"
+  - sudo -u opc git config --global user.email "deploy@jobtracker"
+  - sudo -u opc git config --global credential.helper store
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Optional: Clone Repository (Uncomment and update URL)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  # Update this with your actual GitHub repository URL
+  # - sudo -u opc git clone https://github.com/Nakeerans/claudeproject.git /opt/jobtracker
+  # OR for private repos with token:
+  # - sudo -u opc git clone https://YOUR_GITHUB_TOKEN@github.com/Nakeerans/claudeproject.git /opt/jobtracker
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # System Optimizations
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  # Increase file limits for Node.js
+  - echo 'fs.file-max = 65535' | sudo tee -a /etc/sysctl.conf
+  - sudo sysctl -p
+
+  # Configure log rotation for application logs
+  - |
+    cat << 'EOF' | sudo tee /etc/logrotate.d/jobtracker
+    /var/log/jobtracker/*.log {
+        daily
+        rotate 7
+        compress
+        delaycompress
+        notifempty
+        create 0640 opc opc
+        sharedscripts
+    }
+    EOF
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Install Useful Utilities
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - sudo yum install -y htop nethogs iotop
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Setup Helpful Aliases
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - |
+    cat << 'EOF' | sudo tee -a /home/opc/.bashrc
+
+    # Job Tracker Aliases
+    alias jt='cd /opt/jobtracker'
+    alias jtlogs='docker-compose -f /opt/jobtracker/docker-compose.yml logs -f'
+    alias jtrestart='docker-compose -f /opt/jobtracker/docker-compose.yml restart'
+    alias jtstatus='docker-compose -f /opt/jobtracker/docker-compose.yml ps'
+    alias jtinfo='/opt/scripts/server-info.sh'
+    EOF
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Clean Up
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - sudo yum clean all
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Display Server Info on Login
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - echo '/opt/scripts/server-info.sh' | sudo tee -a /home/opc/.bash_profile
+
+# Final message
+final_message: |
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✅ Job Tracker Server - FULLY CONFIGURED!
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Your Oracle Cloud instance is ready for Job Tracker deployment!
+
+  ✅ Installed & Configured:
+     - Docker & Docker Compose
+     - Git & PostgreSQL client
+     - Firewall (ports 22, 80, 443, 3000, 5432)
+     - Swap space (2GB)
+     - Application directories
+     - Backup directories
+     - Logging system
+     - Helpful aliases
+
+  📁 Directories Created:
+     - /opt/jobtracker  (application)
+     - /opt/backups     (database backups)
+     - /opt/scripts     (helper scripts)
+
+  🔧 Next Steps:
+
+  1. SSH to this instance:
+     ssh opc@<instance-ip>
+
+  2. Clone your repository:
+     cd /opt/jobtracker
+     git clone https://github.com/Nakeerans/claudeproject.git .
+
+  3. Configure environment:
+     cp .env.template .env
+     nano .env
+     (Add your ANTHROPIC_API_KEY and other secrets)
+
+  4. Deploy application:
+     docker-compose up -d
+
+  5. Access your app:
+     http://<instance-ip>:3000
+
+  💡 Helpful Commands:
+     jt         - Go to application directory
+     jtlogs     - View application logs
+     jtrestart  - Restart application
+     jtstatus   - Check application status
+     jtinfo     - Display server information
+
+  📚 Documentation:
+     All setup guides are in your repository
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Cloud-init setup completed in $UPTIME seconds
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
