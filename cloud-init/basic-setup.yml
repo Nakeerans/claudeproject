@@ -62,10 +62,10 @@ runcmd:
   - sudo firewall-cmd --permanent --add-port=3000/tcp
   - sudo firewall-cmd --reload
 
-  # Install Docker
-  - curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
-  - sh /tmp/get-docker.sh
-  - rm /tmp/get-docker.sh
+  # Install Docker (Oracle Linux)
+  - sudo yum install -y yum-utils
+  - sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  - sudo yum install -y docker-ce docker-ce-cli containerd.io
 
   # Install Docker Compose
   - sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose

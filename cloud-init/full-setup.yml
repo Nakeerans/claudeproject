@@ -174,12 +174,12 @@ runcmd:
   - sudo firewall-cmd --reload
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  # Install Docker
+  # Install Docker (Oracle Linux)
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  - curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
-  - sh /tmp/get-docker.sh
-  - rm /tmp/get-docker.sh
+  - sudo yum install -y yum-utils
+  - sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  - sudo yum install -y docker-ce docker-ce-cli containerd.io
   - sudo systemctl start docker
   - sudo systemctl enable docker
 
