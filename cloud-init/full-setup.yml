@@ -32,7 +32,7 @@ write_files:
       # Database Configuration
       DB_NAME=huntr_clone
       DB_USER=jobtracker_user
-      DB_PASSWORD=CHANGE_ME_GENERATE_STRONG_PASSWORD
+      DB_PASSWORD=Dbpassword_Dec2025
       DB_PORT=5432
 
       # Application Configuration
