@@ -166,6 +166,10 @@ runcmd:
   # System Configuration
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  # Wait for firewalld to be ready
+  - sudo systemctl start firewalld
+  - sleep 5
+
   # Configure firewall (Oracle Linux)
   - sudo firewall-cmd --permanent --add-service=http
   - sudo firewall-cmd --permanent --add-service=https
