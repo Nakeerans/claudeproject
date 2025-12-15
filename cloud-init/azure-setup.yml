@@ -1,0 +1,66 @@
+#cloud-config
+# Job Tracker - Azure Ubuntu Setup
+# Optimized for Azure B1s (Free Tier) with Ubuntu 22.04
+
+# NO package_upgrade - too slow and not needed
+package_update: true
+
+# Install packages
+packages:
+  - git
+  - curl
+  - wget
+  - docker.io
+  - docker-compose
+
+# Run commands
+runcmd:
+  # Start Docker
+  - systemctl start docker
+  - systemctl enable docker
+  - usermod -aG docker azureuser
+
+  # Create directories
+  - mkdir -p /opt/jobtracker
+  - mkdir -p /opt/backups
+  - chown -R azureuser:azureuser /opt/jobtracker
+  - chown -R azureuser:azureuser /opt/backups
+
+  # Create env template
+  - |
+    cat > /opt/jobtracker/.env.template << 'EOF'
+    # Database
+    DB_NAME=huntr_clone
+    DB_USER=jobtracker_user
+    DB_PASSWORD=CHANGE_ME
+    DB_PORT=5432
+
+    # Application
+    NODE_ENV=production
+    APP_PORT=3000
+    CLIENT_URL=http://YOUR_SERVER_IP
+    LOG_LEVEL=info
+
+    # Auth
+    JWT_SECRET=CHANGE_ME
+    SESSION_SECRET=CHANGE_ME
+
+    # AI
+    ANTHROPIC_API_KEY=your_key_here
+    EOF
+
+  - chown azureuser:azureuser /opt/jobtracker/.env.template
+
+final_message: |
+  ✅ Job Tracker Server Ready!
+
+  Installed:
+  - Docker & Docker Compose
+  - Git
+
+  Next steps:
+  1. SSH: ssh azureuser@<vm-ip>
+  2. Clone: cd /opt/jobtracker && git clone ${github_repository} .
+  3. Configure: cp .env.template .env && nano .env
+  4. Deploy: docker-compose up -d
+  5. Access: http://<vm-ip>:3000
