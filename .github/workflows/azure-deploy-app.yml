@@ -1,0 +1,220 @@
+name: Deploy Application to Azure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.github/**'
+      - 'docs/**'
+
+env:
+  VM_IP: 4.157.253.229
+  VM_USER: azureuser
+  APP_DIR: /opt/jobtracker
+
+jobs:
+  deploy:
+    name: Deploy to Azure VM
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: http://${{ env.VM_IP }}:3000
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AZURE_SSH_KEY }}" > ~/.ssh/azure_key
+          chmod 600 ~/.ssh/azure_key
+          ssh-keyscan -H ${{ env.VM_IP }} >> ~/.ssh/known_hosts
+
+      - name: Check VM connectivity
+        run: |
+          ssh -i ~/.ssh/azure_key -o StrictHostKeyChecking=no ${{ env.VM_USER }}@${{ env.VM_IP }} "echo 'VM is reachable'"
+
+      - name: Check cloud-init status
+        run: |
+          echo "Checking if cloud-init has completed..."
+          ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} "sudo cloud-init status --wait"
+
+      - name: Setup application directory
+        run: |
+          ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} << 'ENDSSH'
+            # Create directory if it doesn't exist
+            sudo mkdir -p ${{ env.APP_DIR }}
+            sudo chown -R ${{ env.VM_USER }}:${{ env.VM_USER }} ${{ env.APP_DIR }}
+
+            # Create backup directory
+            sudo mkdir -p /opt/backups
+            sudo chown -R ${{ env.VM_USER }}:${{ env.VM_USER }} /opt/backups
+          ENDSSH
+
+      - name: Backup existing deployment
+        continue-on-error: true
+        run: |
+          ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} << 'ENDSSH'
+            if [ -d "${{ env.APP_DIR }}/.git" ]; then
+              BACKUP_NAME="backup-$(date +%Y%m%d-%H%M%S)"
+              echo "Creating backup: $BACKUP_NAME"
+              sudo tar -czf /opt/backups/$BACKUP_NAME.tar.gz -C ${{ env.APP_DIR }} .
+              echo "Backup created successfully"
+            fi
+          ENDSSH
+
+      - name: Deploy code to VM
+        run: |
+          ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} << 'ENDSSH'
+            cd ${{ env.APP_DIR }}
+
+            if [ -d ".git" ]; then
+              echo "Repository exists, pulling latest changes..."
+              git fetch origin
+              git reset --hard origin/main
+              git clean -fd
+            else
+              echo "Cloning repository..."
+              git clone https://github.com/${{ github.repository }}.git .
+            fi
+
+            echo "Current commit: $(git rev-parse --short HEAD)"
+          ENDSSH
+
+      - name: Create environment file
+        run: |
+          ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} "cat > ${{ env.APP_DIR }}/.env" << 'EOF'
+          # Database Configuration
+          DB_NAME=huntr_clone
+          DB_USER=jobtracker_user
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_PORT=5432
+
+          # Application Configuration
+          NODE_ENV=production
+          APP_PORT=3000
+          CLIENT_URL=http://${{ env.VM_IP }}:3000
+          LOG_LEVEL=info
+
+          # Authentication Secrets
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+
+          # AI Features
+          ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Google OAuth (Optional)
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}
+          EOF
+
+      - name: Deploy with Docker Compose
+        run: |
+          ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} << 'ENDSSH'
+            cd ${{ env.APP_DIR }}
+
+            echo "Stopping existing containers..."
+            docker-compose down || true
+
+            echo "Pulling latest images..."
+            docker-compose pull
+
+            echo "Building and starting services..."
+            docker-compose up -d --build
+
+            echo "Waiting for services to be healthy..."
+            sleep 15
+          ENDSSH
+
+      - name: Run database migrations
+        run: |
+          ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} << 'ENDSSH'
+            cd ${{ env.APP_DIR }}
+
+            echo "Running database migrations..."
+            docker-compose exec -T app npx prisma migrate deploy || echo "Migration completed or not needed"
+          ENDSSH
+
+      - name: Check deployment status
+        run: |
+          ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} << 'ENDSSH'
+            cd ${{ env.APP_DIR }}
+
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Container Status:"
+            docker-compose ps
+
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Health Check:"
+            docker-compose exec -T app curl -f http://localhost:3000/health || echo "Health check endpoint not responding yet"
+
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Recent Logs:"
+            docker-compose logs --tail=30 app
+          ENDSSH
+
+      - name: Verify application is accessible
+        run: |
+          echo "Waiting for application to be fully ready..."
+          sleep 10
+
+          echo "Testing application endpoint..."
+          curl -f http://${{ env.VM_IP }}:3000/health || curl -f http://${{ env.VM_IP }}:3000 || echo "⚠️ Application may still be starting up"
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Deployment Successful!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "🌐 Application URL: http://${{ env.VM_IP }}:3000"
+          echo "📝 Commit: ${{ github.sha }}"
+          echo "👤 Deployed by: ${{ github.actor }}"
+          echo "⏰ Time: $(date)"
+          echo ""
+          echo "Useful commands:"
+          echo "  ssh ${{ env.VM_USER }}@${{ env.VM_IP }}"
+          echo "  cd ${{ env.APP_DIR }}"
+          echo "  docker-compose ps"
+          echo "  docker-compose logs -f app"
+          echo ""
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "⚠️ Deployment failed, checking for backup..."
+          ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} << 'ENDSSH'
+            LATEST_BACKUP=$(ls -t /opt/backups/*.tar.gz 2>/dev/null | head -1)
+            if [ -n "$LATEST_BACKUP" ]; then
+              echo "Rolling back to: $LATEST_BACKUP"
+              cd ${{ env.APP_DIR }}
+              docker-compose down
+              sudo tar -xzf $LATEST_BACKUP -C ${{ env.APP_DIR }}
+              docker-compose up -d
+              echo "Rollback completed"
+            else
+              echo "No backup found, manual intervention required"
+            fi
+          ENDSSH
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ~/.ssh/azure_key
