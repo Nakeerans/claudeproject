@@ -42,7 +42,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run dev',
+    command: process.env.CI
+      ? 'DATABASE_URL=postgresql://test_user:test_password@localhost:5432/test_db JWT_SECRET=test_jwt_secret SESSION_SECRET=test_session_secret NODE_ENV=test npm run dev:server'
+      : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000, // 2 minutes for backend + DB setup
