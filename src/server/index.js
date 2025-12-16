@@ -15,6 +15,8 @@ import interviewRoutes from './routes/interviews.js';
 import documentRoutes from './routes/documents.js';
 import analyticsRoutes from './routes/analytics.js';
 import aiRoutes from './routes/ai.js';
+import profileRoutes from './routes/profile.js';
+import patternsRoutes from './routes/patterns.js';
 import { authenticateToken } from './middleware/auth.js';
 
 dotenv.config();
@@ -59,6 +61,8 @@ app.use('/api/interviews', authenticateToken, interviewRoutes);
 app.use('/api/documents', authenticateToken, documentRoutes);
 app.use('/api/analytics', authenticateToken, analyticsRoutes);
 app.use('/api/ai', authenticateToken, aiRoutes);
+app.use('/api/profile', authenticateToken, profileRoutes);
+app.use('/api/patterns', authenticateToken, patternsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

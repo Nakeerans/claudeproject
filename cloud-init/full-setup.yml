@@ -3,9 +3,9 @@
 # This script fully configures the server and prepares it for immediate deployment
 # IMPORTANT: Update the GITHUB_REPO variable below with your repository URL
 
-# Update package list and upgrade existing packages
+# Update package list only (upgrade is too slow on Oracle Linux)
 package_update: true
-package_upgrade: true
+package_upgrade: false
 
 # Install required packages
 packages:

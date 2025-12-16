@@ -23,6 +23,8 @@ model User {
   jobs          Job[]
   contacts      Contact[]
   documents     Document[]
+  profile       UserProfile?
+  patterns      AutofillPattern[]
 
   @@map("users")
 }
@@ -197,4 +199,74 @@ model Activity {
   @@index([jobId])
   @@index([createdAt])
   @@map("activities")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Extension Autofill Models
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model UserProfile {
+  id            String    @id @default(uuid())
+  userId        String    @unique @map("user_id")
+
+  // Personal Information
+  firstName     String?   @map("first_name")
+  lastName      String?   @map("last_name")
+  fullName      String?   @map("full_name")
+  email         String?
+  phone         String?
+
+  // Professional Links
+  linkedinUrl   String?   @map("linkedin_url")
+  githubUrl     String?   @map("github_url")
+  portfolioUrl  String?   @map("portfolio_url")
+  websiteUrl    String?   @map("website_url")
+
+  // Location
+  address       String?
+  city          String?
+  state         String?
+  zipCode       String?   @map("zip_code")
+  country       String?
+
+  // Professional Info
+  currentTitle  String?   @map("current_title")
+  yearsExperience Int?    @map("years_experience")
+
+  // Additional Data (flexible for custom fields)
+  customFields  Json?     @map("custom_fields")
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model AutofillPattern {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+
+  // Pattern Information
+  siteUrl       String    @map("site_url") // Base URL of the site (e.g., greenhouse.io)
+  siteName      String?   @map("site_name") // Human-readable site name
+
+  // Recorded Actions (from learning mode)
+  actions       Json      // Array of recorded user actions
+  fieldMappings Json      @map("field_mappings") // Field selectors and types
+
+  // Metadata
+  recordedAt    DateTime  @map("recorded_at") @default(now())
+  timesUsed     Int       @default(0) @map("times_used")
+  successRate   Float?    @map("success_rate") // Track how often it works
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([siteUrl])
+  @@map("autofill_patterns")
 }

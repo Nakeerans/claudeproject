@@ -1,11 +1,11 @@
-#!/bin/bash
+i#!/bin/bash
 
 # Set GitHub Secrets from File
-# Usage: ./scripts/set-github-secrets.sh secrets.env
+# Usage: ./scripts/set-github-secrets.sh updatesecrets.env
 
 set -e
 
-SECRETS_FILE="${1:-secrets.env}"
+SECRETS_FILE="${1:-updatesecret.env}"
 
 if [ ! -f "$SECRETS_FILE" ]; then
     echo "Error: $SECRETS_FILE not found"

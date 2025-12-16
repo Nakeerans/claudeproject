@@ -3,9 +3,9 @@
 # This script runs automatically when the instance is created
 # It installs Docker, Docker Compose, Git, and sets up the server
 
-# Update package list and upgrade existing packages
+# Update package list only (upgrade is too slow on Oracle Linux)
 package_update: true
-package_upgrade: true
+package_upgrade: false
 
 # Install required packages
 packages:
