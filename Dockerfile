@@ -30,7 +30,6 @@ RUN npm ci --only=production
 
 # Copy backend source
 COPY src/ ./src/
-COPY utils/ ./utils/
 COPY prisma/ ./prisma/
 
 # Generate Prisma Client
@@ -47,7 +46,6 @@ RUN apk add --no-cache curl
 # Copy backend dependencies and source
 COPY --from=backend-builder /app/node_modules ./node_modules
 COPY --from=backend-builder /app/src ./src
-COPY --from=backend-builder /app/utils ./utils
 COPY --from=backend-builder /app/prisma ./prisma
 COPY package*.json ./
 
