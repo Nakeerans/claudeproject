@@ -1,7 +1,7 @@
 # Multi-stage build for Job Tracker Application
 
 # Stage 1: Build frontend
-FROM node:18-alpine AS frontend-builder
+FROM node:18-slim AS frontend-builder
 
 WORKDIR /app/client
 
@@ -18,7 +18,7 @@ COPY client/ ./
 RUN npm run build
 
 # Stage 2: Build backend
-FROM node:18-alpine AS backend-builder
+FROM node:18-slim AS backend-builder
 
 WORKDIR /app
 
@@ -36,12 +36,16 @@ COPY prisma/ ./prisma/
 RUN npx prisma generate
 
 # Stage 3: Production image
-FROM node:18-alpine
+FROM node:18-slim
 
 WORKDIR /app
 
-# Install curl for healthchecks
-RUN apk add --no-cache curl
+# Install curl and OpenSSL for Prisma and healthchecks
+RUN apt-get update && apt-get install -y \
+    curl \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy backend dependencies and source
 COPY --from=backend-builder /app/node_modules ./node_modules
