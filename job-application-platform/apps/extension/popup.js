@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Open web app link
   openWebappLink.addEventListener('click', (e) => {
     e.preventDefault();
-    // In production, this would be your actual web app URL
-    chrome.tabs.create({ url: 'http://localhost:3000' });
+    // Open the deployed Azure web app
+    chrome.tabs.create({ url: 'http://4.157.253.229:3000' });
   });
 });
