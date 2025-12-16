@@ -44,6 +44,10 @@ export default function Login() {
     setError('Google login failed. Please try again.')
   }
 
+  // Check if Google OAuth is configured
+  const isGoogleConfigured = import.meta.env.VITE_GOOGLE_CLIENT_ID &&
+                             import.meta.env.VITE_GOOGLE_CLIENT_ID.trim() !== '';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
@@ -102,25 +106,40 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="mt-6 mb-6 flex items-center">
-            <div className="flex-1 border-t border-gray-300"></div>
-            <span className="px-4 text-sm text-gray-500">or</span>
-            <div className="flex-1 border-t border-gray-300"></div>
-          </div>
+          {/* Google OAuth - Only show if configured */}
+          {isGoogleConfigured && (
+            <>
+              {/* Divider */}
+              <div className="mt-6 mb-6 flex items-center">
+                <div className="flex-1 border-t border-gray-300"></div>
+                <span className="px-4 text-sm text-gray-500">or</span>
+                <div className="flex-1 border-t border-gray-300"></div>
+              </div>
 
-          {/* Google OAuth */}
-          <div className="flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              useOneTap
-              theme="outline"
-              size="large"
-              text="continue_with"
-              width="384"
-            />
-          </div>
+              {/* Google OAuth */}
+              <div className="flex justify-center">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  useOneTap
+                  theme="outline"
+                  size="large"
+                  text="continue_with"
+                  width="384"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Configuration notice - Only show if NOT configured */}
+          {!isGoogleConfigured && (
+            <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 text-center">
+                💡 <strong>Want to enable Google Sign-In?</strong><br />
+                See <code className="text-xs bg-blue-100 px-1 rounded">QUICK_START_GOOGLE_OAUTH.md</code> for setup
+              </p>
+            </div>
+          )}
 
           {/* Sign up link */}
           <p className="mt-6 text-center text-sm text-gray-600">

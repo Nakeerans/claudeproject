@@ -96,7 +96,7 @@ jobs:
             echo "Current commit: $(git rev-parse --short HEAD)"
           ENDSSH
 
-      - name: Create environment file
+      - name: Create backend environment file
         run: |
           ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} "cat > ${{ env.APP_DIR }}/.env" << 'EOF'
           # Database Configuration
@@ -118,10 +118,17 @@ jobs:
           # AI Features
           ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
 
-          # Google OAuth (Optional)
+          # Google OAuth
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}
+          EOF
+
+      - name: Create frontend environment file
+        run: |
+          ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} "cat > ${{ env.APP_DIR }}/client/.env" << 'EOF'
+          # Google OAuth Client ID for Frontend
+          VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           EOF
 
       - name: Deploy with Docker Compose
