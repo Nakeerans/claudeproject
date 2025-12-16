@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { GoogleLogin } from '@react-oauth/google'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Register() {
@@ -9,7 +10,7 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { register } = useAuth()
+  const { register, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -36,6 +37,24 @@ export default function Register() {
       setError(result.error)
       setLoading(false)
     }
+  }
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError('')
+    setLoading(true)
+
+    const result = await loginWithGoogle(credentialResponse.credential)
+
+    if (result.success) {
+      navigate('/dashboard')
+    } else {
+      setError(result.error)
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleError = () => {
+    setError('Google sign up failed. Please try again.')
   }
 
   return (
@@ -126,6 +145,25 @@ export default function Register() {
               {loading ? 'Creating account...' : 'Sign Up'}
             </button>
           </form>
+
+          {/* Divider */}
+          <div className="mt-6 mb-6 flex items-center">
+            <div className="flex-1 border-t border-gray-300"></div>
+            <span className="px-4 text-sm text-gray-500">or</span>
+            <div className="flex-1 border-t border-gray-300"></div>
+          </div>
+
+          {/* Google OAuth */}
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              theme="outline"
+              size="large"
+              text="signup_with"
+              width="384"
+            />
+          </div>
 
           {/* Sign in link */}
           <p className="mt-6 text-center text-sm text-gray-600">

@@ -1,11 +1,15 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
+import { OAuth2Client } from 'google-auth-library';
 import { generateToken, authenticateToken } from '../middleware/auth.js';
 import { logger } from '../../utils/logger.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+// Initialize Google OAuth client
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Register with email/password
 router.post('/register', async (req, res) => {
@@ -106,34 +110,77 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
-// Google OAuth (placeholder - requires Google OAuth setup)
+// Google OAuth - Verify token and authenticate
 router.post('/google', async (req, res) => {
   try {
-    const { googleToken, email, name, avatarUrl } = req.body;
+    const { credential } = req.body;
 
-    // In production, verify googleToken with Google API
-    // For now, we'll create/find user based on email
+    if (!credential) {
+      return res.status(400).json({ error: 'Google credential is required' });
+    }
 
+    // Verify the Google token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+    const googleId = payload['sub'];
+    const email = payload['email'];
+    const name = payload['name'];
+    const avatarUrl = payload['picture'];
+    const emailVerified = payload['email_verified'];
+
+    if (!emailVerified) {
+      return res.status(400).json({ error: 'Email not verified by Google' });
+    }
+
+    // Find or create user
     let user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
+      // Create new user with Google account
       user = await prisma.user.create({
         data: {
           email,
           name,
           avatarUrl,
-          googleId: googleToken // Should be actual Google ID
+          googleId,
+          password: null // No password for Google OAuth users
         },
         select: {
           id: true,
           email: true,
           name: true,
-          avatarUrl: true
+          avatarUrl: true,
+          googleId: true
         }
       });
-      logger.info(`User created via Google OAuth: ${email}`);
+      logger.info(`New user created via Google OAuth: ${email}`);
+    } else if (!user.googleId) {
+      // Link Google account to existing email/password user
+      user = await prisma.user.update({
+        where: { email },
+        data: {
+          googleId,
+          avatarUrl: avatarUrl || user.avatarUrl
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          avatarUrl: true,
+          googleId: true
+        }
+      });
+      logger.info(`Google account linked to existing user: ${email}`);
+    } else {
+      // User already exists with Google
+      logger.info(`Existing Google user logged in: ${email}`);
     }
 
+    // Generate JWT token
     const token = generateToken(user.id);
 
     res.json({
@@ -147,6 +194,15 @@ router.post('/google', async (req, res) => {
     });
   } catch (error) {
     logger.error('Google auth error:', error);
+
+    // More specific error messages
+    if (error.message?.includes('Token used too late')) {
+      return res.status(401).json({ error: 'Google token expired' });
+    }
+    if (error.message?.includes('Invalid token')) {
+      return res.status(401).json({ error: 'Invalid Google token' });
+    }
+
     res.status(500).json({ error: 'Google authentication failed' });
   }
 });

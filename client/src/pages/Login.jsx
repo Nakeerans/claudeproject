@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { GoogleLogin } from '@react-oauth/google'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Login() {
@@ -7,7 +8,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { login } = useAuth()
+  const { login, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -23,6 +24,24 @@ export default function Login() {
       setError(result.error)
       setLoading(false)
     }
+  }
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError('')
+    setLoading(true)
+
+    const result = await loginWithGoogle(credentialResponse.credential)
+
+    if (result.success) {
+      navigate('/dashboard')
+    } else {
+      setError(result.error)
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleError = () => {
+    setError('Google login failed. Please try again.')
   }
 
   return (
@@ -90,15 +109,18 @@ export default function Login() {
             <div className="flex-1 border-t border-gray-300"></div>
           </div>
 
-          {/* Google OAuth (placeholder) */}
-          <button
-            type="button"
-            className="w-full btn btn-secondary py-3 flex items-center justify-center space-x-2"
-            onClick={() => alert('Google OAuth not yet configured')}
-          >
-            <span>🔐</span>
-            <span>Continue with Google</span>
-          </button>
+          {/* Google OAuth */}
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              useOneTap
+              theme="outline"
+              size="large"
+              text="continue_with"
+              width="384"
+            />
+          </div>
 
           {/* Sign up link */}
           <p className="mt-6 text-center text-sm text-gray-600">
