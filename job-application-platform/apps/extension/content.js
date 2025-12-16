@@ -248,11 +248,36 @@ async function handleAutofillClick(button) {
       return;
     }
 
+    button.innerHTML = '⏳ Checking for patterns...';
+
+    // Check for saved patterns for this site
+    let patternId = null;
+    try {
+      const patternsData = await window.JobFlowAPI.getPatterns(window.location.href);
+      if (patternsData.patterns && patternsData.patterns.length > 0) {
+        // Use the most recently used pattern
+        const pattern = patternsData.patterns[0];
+        patternId = pattern.id;
+        console.log('Using saved pattern:', pattern);
+      }
+    } catch (error) {
+      console.log('No patterns found, using field detection');
+    }
+
     button.innerHTML = '⏳ Filling form...';
 
     // Perform autofill
     const formData = detectedForms[0];
     const result = await autofillForm(formData, profileData.profile);
+
+    // Update pattern statistics if we used a pattern
+    if (result.success && patternId) {
+      try {
+        await window.JobFlowAPI.updatePatternStats(patternId, true);
+      } catch (error) {
+        console.error('Failed to update pattern stats:', error);
+      }
+    }
 
     if (result.success) {
       button.innerHTML = `✅ Filled ${result.filledCount} fields!`;
@@ -262,6 +287,14 @@ async function handleAutofillClick(button) {
       }, 3000);
     } else {
       button.innerHTML = '❌ Autofill failed';
+      // Update pattern statistics as failed if we used a pattern
+      if (patternId) {
+        try {
+          await window.JobFlowAPI.updatePatternStats(patternId, false);
+        } catch (error) {
+          console.error('Failed to update pattern stats:', error);
+        }
+      }
       setTimeout(() => {
         alert(`⚠️ Autofill Failed\n\n${result.error}`);
         button.innerHTML = '⚡ JobFlow: Autofill';
@@ -447,7 +480,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'STOP_RECORDING':
       stopRecording();
-      sendResponse({ success: true, actions: recordedActions });
+      // Build field mappings from detected forms
+      const fieldMappings = detectedForms.length > 0
+        ? detectedForms[0].fields.map(f => ({
+            selector: f.selector,
+            fieldType: f.fieldType,
+            label: f.label,
+            name: f.name
+          }))
+        : [];
+      sendResponse({
+        success: true,
+        actions: recordedActions,
+        fieldMappings
+      });
       break;
   }
 

@@ -94,12 +94,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       try {
         const response = await chrome.tabs.sendMessage(tab.id, { type: 'STOP_RECORDING' });
 
-        alert(
-          `✅ Recording Complete!\n\n` +
-          `Captured ${response.actions.length} actions\n\n` +
-          `These actions will be analyzed by AI to create\n` +
-          `an automation pattern for this site.`
-        );
+        // Save pattern to backend
+        try {
+          const result = await window.JobFlowAPI.savePattern({
+            siteUrl: tab.url,
+            siteName: new URL(tab.url).hostname,
+            actions: response.actions,
+            fieldMappings: response.fieldMappings || []
+          });
+
+          alert(
+            `✅ Pattern Saved!\n\n` +
+            `Captured ${response.actions.length} actions from ${result.pattern.siteName}\n\n` +
+            `This pattern will be used for autofill on similar pages.`
+          );
+        } catch (apiError) {
+          console.error('Error saving pattern:', apiError);
+          alert(
+            `⚠️ Pattern Recorded But Not Saved\n\n` +
+            `Captured ${response.actions.length} actions\n\n` +
+            `Error: ${apiError.message}\n` +
+            `Please make sure you're logged in to the web app.`
+          );
+        }
 
         recordBtn.textContent = 'Start Learning Mode';
         recordBtn.style.background = '#f3f4f6';

@@ -151,6 +151,18 @@ router.post('/google', async (req, res) => {
   }
 });
 
+// Check authentication status (for extension)
+router.get('/check', authenticateToken, (req, res) => {
+  res.json({
+    authenticated: true,
+    user: {
+      id: req.user.id,
+      email: req.user.email,
+      name: req.user.name
+    }
+  });
+});
+
 // Logout
 router.post('/logout', (req, res) => {
   res.json({ message: 'Logged out successfully' });

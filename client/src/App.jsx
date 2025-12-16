@@ -11,6 +11,7 @@ import Contacts from './pages/Contacts'
 import Interviews from './pages/Interviews'
 import Documents from './pages/Documents'
 import AITools from './pages/AITools'
+import Settings from './pages/Settings'
 import Layout from './components/Layout'
 
 function App() {
@@ -38,6 +39,7 @@ function App() {
             <Route path="interviews" element={<Interviews />} />
             <Route path="documents" element={<Documents />} />
             <Route path="ai-tools" element={<AITools />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </Router>
