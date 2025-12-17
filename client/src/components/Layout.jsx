@@ -11,6 +11,7 @@ export default function Layout() {
     { name: 'Interviews', href: '/interviews', icon: '📅' },
     { name: 'Documents', href: '/documents', icon: '📄' },
     { name: 'AI Tools', href: '/ai-tools', icon: '🤖' },
+    { name: 'Extension', href: '/extension', icon: '🧩' },
     { name: 'Settings', href: '/settings', icon: '⚙️' },
   ]
 

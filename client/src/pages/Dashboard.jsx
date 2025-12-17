@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import axios from 'axios'
 import { format, parseISO } from 'date-fns'
 
@@ -8,6 +9,7 @@ export default function Dashboard() {
   const [activities, setActivities] = useState([])
   const [upcomingInterviews, setUpcomingInterviews] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showExtensionBanner, setShowExtensionBanner] = useState(true)
 
   useEffect(() => {
     loadDashboard()
@@ -40,6 +42,69 @@ export default function Dashboard() {
   return (
     <div>
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Dashboard</h1>
+
+      {/* Chrome Extension Banner */}
+      {showExtensionBanner && (
+        <div className="mb-8 relative">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg shadow-lg overflow-hidden">
+            <div className="px-6 py-8 sm:px-8 sm:py-10">
+              <div className="flex flex-col lg:flex-row items-center justify-between">
+                <div className="flex-1 mb-6 lg:mb-0">
+                  <div className="flex items-center mb-3">
+                    <span className="text-4xl mr-3">🧩</span>
+                    <h2 className="text-2xl font-bold text-white">
+                      Get the Chrome Extension
+                    </h2>
+                  </div>
+                  <p className="text-blue-100 text-lg mb-4 max-w-2xl">
+                    Autofill job applications with one click! Save hours of repetitive typing and never miss a field again.
+                  </p>
+                  <div className="flex flex-wrap gap-4 text-sm text-blue-100">
+                    <div className="flex items-center">
+                      <span className="mr-2">✨</span>
+                      <span>One-click autofill</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="mr-2">🎯</span>
+                      <span>Smart field detection</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="mr-2">🔒</span>
+                      <span>Secure & private</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link
+                    to="/extension"
+                    className="inline-flex items-center justify-center px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors shadow-md"
+                  >
+                    <span className="mr-2">📥</span>
+                    Install Extension
+                  </Link>
+                  <a
+                    href="https://github.com/Nakeerans/claudeproject/tree/main/job-application-platform/apps/extension"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center px-6 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:text-blue-600 transition-colors"
+                  >
+                    View on GitHub
+                  </a>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowExtensionBanner(false)}
+              className="absolute top-4 right-4 text-white hover:text-blue-200 transition-colors"
+              aria-label="Dismiss banner"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

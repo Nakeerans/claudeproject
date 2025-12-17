@@ -130,6 +130,37 @@ jobs:
           VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           EOF
 
+      - name: Package Chrome Extension
+        run: |
+          ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} << 'ENDSSH'
+            cd ${{ env.APP_DIR }}
+
+            echo "📦 Packaging Chrome Extension..."
+
+            # Create downloads directory
+            mkdir -p client/public/downloads
+
+            # Remove old package if exists
+            rm -f client/public/downloads/jobflow-chrome-extension.zip
+
+            # Package extension
+            cd job-application-platform/apps/extension
+            zip -r ../../../client/public/downloads/jobflow-chrome-extension.zip \
+              manifest.json \
+              popup.html \
+              popup.js \
+              content.js \
+              api.js \
+              config.js \
+              icon.svg \
+              README.md
+
+            cd ../../..
+
+            echo "✅ Extension packaged successfully"
+            ls -lh client/public/downloads/jobflow-chrome-extension.zip
+          ENDSSH
+
       - name: Deploy with Docker Compose
         run: |
           ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} << 'ENDSSH'

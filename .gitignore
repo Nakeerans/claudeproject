@@ -70,6 +70,9 @@ test-run.log
 apps/extension/dist/
 apps/extension/*.zip
 
+# Extension downloads (generated during build)
+client/public/downloads/*.zip
+
 # Misc
 .cache/
 *.pid
