@@ -137,6 +137,13 @@ jobs:
 
             echo "📦 Packaging Chrome Extension..."
 
+            # Install zip if not present
+            if ! command -v zip &> /dev/null; then
+              echo "Installing zip utility..."
+              sudo apt update -qq
+              sudo apt install -y zip
+            fi
+
             # Create downloads directory
             mkdir -p client/public/downloads
 
