@@ -16,7 +16,6 @@ on:
       - main
     paths-ignore:
       - '**.md'
-      - '.github/**'
       - 'docs/**'
 
 env:
