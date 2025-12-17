@@ -221,36 +221,41 @@ jobs:
           ENDSSH
 
       - name: Setup SSL certificate (if domain configured)
-        if: ${{ secrets.DOMAIN_NAME != '' }}
         continue-on-error: true
         run: |
           ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} << 'ENDSSH'
-            echo "Installing Certbot if not present..."
-            if ! command -v certbot &> /dev/null; then
-              sudo apt update
-              sudo apt install -y certbot python3-certbot-nginx
-            fi
-
-            echo "Attempting to get SSL certificate..."
             DOMAIN="${{ secrets.DOMAIN_NAME }}"
-            EMAIL="${{ secrets.SSL_EMAIL }}"
-            if [ -z "$EMAIL" ]; then
-              EMAIL="admin@$DOMAIN"
+
+            # Only proceed if domain is configured
+            if [ -n "$DOMAIN" ]; then
+              echo "Installing Certbot if not present..."
+              if ! command -v certbot &> /dev/null; then
+                sudo apt update
+                sudo apt install -y certbot python3-certbot-nginx
+              fi
+
+              echo "Attempting to get SSL certificate..."
+              EMAIL="${{ secrets.SSL_EMAIL }}"
+              if [ -z "$EMAIL" ]; then
+                EMAIL="admin@$DOMAIN"
+              fi
+
+              sudo certbot --nginx \
+                -d $DOMAIN \
+                -d www.$DOMAIN \
+                --non-interactive \
+                --agree-tos \
+                --email $EMAIL \
+                --redirect \
+                || echo "⚠️ SSL setup skipped - ensure DNS is configured"
+
+              echo "Setting up auto-renewal..."
+              sudo systemctl enable certbot.timer || true
+
+              echo "✅ SSL setup attempted"
+            else
+              echo "ℹ️  No domain configured, skipping SSL setup"
             fi
-
-            sudo certbot --nginx \
-              -d $DOMAIN \
-              -d www.$DOMAIN \
-              --non-interactive \
-              --agree-tos \
-              --email $EMAIL \
-              --redirect \
-              || echo "⚠️ SSL setup skipped - ensure DNS is configured"
-
-            echo "Setting up auto-renewal..."
-            sudo systemctl enable certbot.timer || true
-
-            echo "✅ SSL setup attempted"
           ENDSSH
 
       - name: Check deployment status
