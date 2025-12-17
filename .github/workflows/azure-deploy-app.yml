@@ -158,6 +158,92 @@ jobs:
             docker-compose exec -T app npx prisma migrate deploy || echo "Migration completed or not needed"
           ENDSSH
 
+      - name: Setup Nginx reverse proxy
+        run: |
+          ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} << 'ENDSSH'
+            echo "Installing Nginx if not present..."
+            if ! command -v nginx &> /dev/null; then
+              sudo apt update
+              sudo apt install -y nginx
+            fi
+
+            echo "Creating Nginx configuration..."
+            sudo tee /etc/nginx/sites-available/jobflow > /dev/null << 'NGINX_EOF'
+          server {
+              listen 80;
+              server_name ${{ secrets.DOMAIN_NAME || env.VM_IP }} www.${{ secrets.DOMAIN_NAME || '' }};
+
+              # Security headers
+              add_header X-Frame-Options "SAMEORIGIN" always;
+              add_header X-Content-Type-Options "nosniff" always;
+              add_header X-XSS-Protection "1; mode=block" always;
+
+              location / {
+                  proxy_pass http://localhost:3000;
+                  proxy_http_version 1.1;
+
+                  # WebSocket support
+                  proxy_set_header Upgrade \$http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+
+                  # Headers
+                  proxy_set_header Host \$host;
+                  proxy_set_header X-Real-IP \$remote_addr;
+                  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto \$scheme;
+
+                  # Timeouts
+                  proxy_connect_timeout 60s;
+                  proxy_send_timeout 60s;
+                  proxy_read_timeout 60s;
+
+                  # Cache
+                  proxy_cache_bypass \$http_upgrade;
+              }
+          }
+          NGINX_EOF
+
+            echo "Enabling Nginx site..."
+            sudo ln -sf /etc/nginx/sites-available/jobflow /etc/nginx/sites-enabled/jobflow
+            sudo rm -f /etc/nginx/sites-enabled/default
+
+            echo "Testing Nginx configuration..."
+            sudo nginx -t
+
+            echo "Restarting Nginx..."
+            sudo systemctl restart nginx
+            sudo systemctl enable nginx
+
+            echo "✅ Nginx configured successfully"
+          ENDSSH
+
+      - name: Setup SSL certificate (if domain configured)
+        if: ${{ secrets.DOMAIN_NAME != '' }}
+        continue-on-error: true
+        run: |
+          ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} << 'ENDSSH'
+            echo "Installing Certbot if not present..."
+            if ! command -v certbot &> /dev/null; then
+              sudo apt update
+              sudo apt install -y certbot python3-certbot-nginx
+            fi
+
+            echo "Attempting to get SSL certificate..."
+            sudo certbot --nginx \
+              -d ${{ secrets.DOMAIN_NAME }} \
+              -d www.${{ secrets.DOMAIN_NAME }} \
+              --non-interactive \
+              --agree-tos \
+              --email ${{ secrets.SSL_EMAIL || 'admin@' }}${{ secrets.DOMAIN_NAME }} \
+              --redirect \
+              || echo "⚠️ SSL setup skipped - ensure DNS is configured"
+
+            echo "Setting up auto-renewal..."
+            sudo systemctl enable certbot.timer || true
+
+            echo "✅ SSL setup attempted"
+          ENDSSH
+
       - name: Check deployment status
         run: |
           ssh -i ~/.ssh/azure_key ${{ env.VM_USER }}@${{ env.VM_IP }} << 'ENDSSH'
@@ -193,16 +279,28 @@ jobs:
           echo "✅ Deployment Successful!"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo ""
-          echo "🌐 Application URL: http://${{ env.VM_IP }}:3000"
+          if [ -n "${{ secrets.DOMAIN_NAME }}" ]; then
+            echo "🌐 Application URL: https://${{ secrets.DOMAIN_NAME }}"
+            echo "🌐 Alternative URL: http://${{ secrets.DOMAIN_NAME }}"
+          else
+            echo "🌐 Application URL: http://${{ env.VM_IP }}"
+          fi
           echo "📝 Commit: ${{ github.sha }}"
           echo "👤 Deployed by: ${{ github.actor }}"
           echo "⏰ Time: $(date)"
+          echo ""
+          echo "✅ Nginx reverse proxy: Configured"
+          if [ -n "${{ secrets.DOMAIN_NAME }}" ]; then
+            echo "✅ SSL certificate: Attempted (check logs above)"
+          fi
           echo ""
           echo "Useful commands:"
           echo "  ssh ${{ env.VM_USER }}@${{ env.VM_IP }}"
           echo "  cd ${{ env.APP_DIR }}"
           echo "  docker-compose ps"
           echo "  docker-compose logs -f app"
+          echo "  sudo systemctl status nginx"
+          echo "  sudo tail -f /var/log/nginx/error.log"
           echo ""
 
       - name: Rollback on failure
