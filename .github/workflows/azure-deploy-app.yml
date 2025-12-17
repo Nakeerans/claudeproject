@@ -168,10 +168,14 @@ jobs:
             fi
 
             echo "Creating Nginx configuration..."
-            sudo tee /etc/nginx/sites-available/jobflow > /dev/null << 'NGINX_EOF'
+            DOMAIN="${{ secrets.DOMAIN_NAME }}"
+            if [ -z "$DOMAIN" ]; then
+              DOMAIN="${{ env.VM_IP }}"
+            fi
+            sudo tee /etc/nginx/sites-available/jobflow > /dev/null << NGINX_EOF
           server {
               listen 80;
-              server_name ${{ secrets.DOMAIN_NAME || env.VM_IP }} www.${{ secrets.DOMAIN_NAME || '' }};
+              server_name $DOMAIN www.$DOMAIN;
 
               # Security headers
               add_header X-Frame-Options "SAMEORIGIN" always;
@@ -229,12 +233,18 @@ jobs:
             fi
 
             echo "Attempting to get SSL certificate..."
+            DOMAIN="${{ secrets.DOMAIN_NAME }}"
+            EMAIL="${{ secrets.SSL_EMAIL }}"
+            if [ -z "$EMAIL" ]; then
+              EMAIL="admin@$DOMAIN"
+            fi
+
             sudo certbot --nginx \
-              -d ${{ secrets.DOMAIN_NAME }} \
-              -d www.${{ secrets.DOMAIN_NAME }} \
+              -d $DOMAIN \
+              -d www.$DOMAIN \
               --non-interactive \
               --agree-tos \
-              --email ${{ secrets.SSL_EMAIL || 'admin@' }}${{ secrets.DOMAIN_NAME }} \
+              --email $EMAIL \
               --redirect \
               || echo "⚠️ SSL setup skipped - ensure DNS is configured"
 
