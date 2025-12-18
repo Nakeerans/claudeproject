@@ -427,6 +427,8 @@
     `;
 
     document.body.appendChild(panelContainer);
+    console.log('JobFlow: Panel container added to page');
+
     initializePanel();
   }
 
@@ -636,4 +638,7 @@
 
   // Create panel on load
   createPanel();
+
+  // Debug: Log that the panel was created
+  console.log('JobFlow: Floating panel loaded and initialized');
 })();
