@@ -54,20 +54,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Login button click
   loginBtn.addEventListener('click', () => {
     // Open web app login page
-    chrome.tabs.create({ url: 'http://4.157.253.229:3000/login' });
+    chrome.tabs.create({ url: 'https://dusti.pro/login' });
   });
 
   // Register link click
   registerLink.addEventListener('click', (e) => {
     e.preventDefault();
-    chrome.tabs.create({ url: 'http://4.157.253.229:3000/register' });
+    chrome.tabs.create({ url: 'https://dusti.pro/register' });
   });
 
   // Logout button click
   logoutBtn.addEventListener('click', async () => {
     try {
       // Call logout API
-      await fetch('http://4.157.253.229:3000/api/auth/logout', {
+      await fetch('https://dusti.pro/api/auth/logout', {
         method: 'POST',
         credentials: 'include'
       });
@@ -224,7 +224,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Open web app link
   openWebappLink.addEventListener('click', (e) => {
     e.preventDefault();
-    // Open the deployed Azure web app
-    chrome.tabs.create({ url: 'http://4.157.253.229:3000' });
+    // Open the deployed web app
+    chrome.tabs.create({ url: 'https://dusti.pro' });
   });
 });

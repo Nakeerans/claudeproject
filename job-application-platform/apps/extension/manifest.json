@@ -11,7 +11,7 @@
   "host_permissions": [
     "https://*/*",
     "http://*/*",
-    "http://4.157.253.229:3000/*"
+    "https://dusti.pro/*"
   ],
   "content_scripts": [
     {

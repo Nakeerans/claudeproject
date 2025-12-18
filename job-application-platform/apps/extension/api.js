@@ -1,7 +1,7 @@
 // JobFlow Extension - API Client
 
 // API Configuration
-const API_BASE_URL = 'http://4.157.253.229:3000';
+const API_BASE_URL = 'https://dusti.pro';
 
 /**
  * Make an authenticated API request

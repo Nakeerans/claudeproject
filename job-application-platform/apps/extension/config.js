@@ -3,7 +3,7 @@
 // API Configuration
 const API_CONFIG = {
   // Production URL
-  BASE_URL: 'http://4.157.253.229:3000',
+  BASE_URL: 'https://dusti.pro',
 
   // API Endpoints (for Phase 2 implementation)
   ENDPOINTS: {
