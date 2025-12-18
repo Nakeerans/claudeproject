@@ -1,7 +1,7 @@
 {
-  "name": "huntr-clone",
+  "name": "jobflow",
   "version": "1.0.0",
-  "description": "Full-featured job search tracking platform - Huntr.co clone",
+  "description": "Full-featured job search tracking platform with intelligent autofill",
   "main": "src/server/index.js",
   "type": "module",
   "scripts": {
@@ -22,10 +22,11 @@
   },
   "keywords": [
     "job-tracker",
-    "huntr-clone",
+    "jobflow",
     "job-search",
     "kanban",
-    "career"
+    "career",
+    "autofill"
   ],
   "author": "",
   "license": "MIT",

@@ -51,7 +51,7 @@ router.post('/register', async (req, res) => {
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'none', // Required for Chrome extensions
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
 
@@ -95,7 +95,7 @@ router.post('/login', async (req, res) => {
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'none', // Required for Chrome extensions
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
 
@@ -203,7 +203,7 @@ router.post('/google', async (req, res) => {
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'none', // Required for Chrome extensions
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
 

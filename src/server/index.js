@@ -36,7 +36,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'huntr-clone-secret-key',
+  secret: process.env.SESSION_SECRET || 'jobflow-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -69,7 +69,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    service: 'huntr-clone-api'
+    service: 'jobflow-api'
   });
 });
 
@@ -92,7 +92,7 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-  logger.info(`🚀 Huntr Clone server running on port ${PORT}`);
+  logger.info(`🚀 JobFlow server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`Client URL: ${process.env.CLIENT_URL || 'http://localhost:5173'}`);
 });
