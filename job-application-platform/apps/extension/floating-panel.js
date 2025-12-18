@@ -20,138 +20,205 @@
     panelContainer.id = 'jobflow-floating-panel';
     panelContainer.innerHTML = `
       <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap');
+
         #jobflow-floating-panel {
           position: fixed;
-          top: 50%;
-          right: 0;
-          transform: translateY(-50%);
+          top: 30px;
+          right: 30px;
           z-index: 2147483647;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          transition: right 0.3s ease;
+          font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         #jobflow-floating-panel.expanded {
-          right: 0;
+          opacity: 1;
+          visibility: visible;
         }
 
         #jobflow-floating-panel.collapsed {
-          right: -340px;
+          opacity: 0;
+          visibility: hidden;
         }
 
         .jobflow-toggle-btn {
-          position: absolute;
-          left: -40px;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 40px;
-          height: 100px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          position: fixed;
+          bottom: 30px;
+          right: 30px;
+          width: 56px;
+          height: 56px;
+          background: linear-gradient(135deg, #551BA4 0%, #46346B 100%);
           border: none;
-          border-radius: 8px 0 0 8px;
+          border-radius: 50%;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
-          font-size: 24px;
-          box-shadow: -2px 2px 8px rgba(0,0,0,0.2);
-          transition: all 0.2s;
+          font-size: 28px;
+          box-shadow: 0px 4px 20px rgba(85, 27, 164, 0.4);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          z-index: 2147483646;
         }
 
         .jobflow-toggle-btn:hover {
-          left: -42px;
-          box-shadow: -4px 4px 12px rgba(0,0,0,0.3);
+          transform: scale(1.1);
+          box-shadow: 0px 6px 30px rgba(85, 27, 164, 0.6);
+          background: linear-gradient(135deg, #6a4feb 0%, #551BA4 100%);
+        }
+
+        .jobflow-toggle-btn:active {
+          transform: scale(0.95);
+        }
+
+        #jobflow-floating-panel.collapsed .jobflow-toggle-btn {
+          opacity: 1;
+          visibility: visible;
+        }
+
+        #jobflow-floating-panel.expanded .jobflow-toggle-btn {
+          bottom: auto;
+          top: 30px;
+          right: 30px;
+          width: 40px;
+          height: 40px;
+          font-size: 20px;
+          box-shadow: 0px 2px 10px rgba(0,0,0,0.3);
         }
 
         .jobflow-panel-content {
-          width: 360px;
-          height: 600px;
-          max-height: 80vh;
+          width: 380px;
+          height: 90vh;
+          max-height: 650px;
           background: white;
-          border-radius: 12px 0 0 12px;
-          box-shadow: -4px 0 16px rgba(0,0,0,0.2);
+          border-radius: 8px;
+          box-shadow: 0px 0px 40px rgba(0,0,0,0.3);
           display: flex;
           flex-direction: column;
           overflow: hidden;
+          opacity: 0;
+          transform: translateY(-20px);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #jobflow-floating-panel.expanded .jobflow-panel-content {
+          opacity: 1;
+          transform: translateY(0);
         }
 
         .jobflow-panel-header {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #551BA4 0%, #46346B 100%);
           color: white;
-          padding: 16px;
+          padding: 20px;
           text-align: center;
         }
 
         .jobflow-panel-header h1 {
           margin: 0;
-          font-size: 20px;
-          font-weight: 700;
+          font-size: 16px;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: 5px;
         }
 
         .jobflow-panel-header p {
-          margin: 4px 0 0 0;
-          font-size: 12px;
-          opacity: 0.9;
+          margin: 8px 0 0 0;
+          font-size: 11px;
+          opacity: 0.8;
+          font-weight: 300;
+          letter-spacing: 1px;
         }
 
         .jobflow-panel-body {
           flex: 1;
           overflow-y: auto;
-          padding: 16px;
+          padding: 20px;
+          background: #fafafa;
+        }
+
+        .jobflow-panel-body::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .jobflow-panel-body::-webkit-scrollbar-track {
+          background: #f1f1f1;
+        }
+
+        .jobflow-panel-body::-webkit-scrollbar-thumb {
+          background: #551BA4;
+          border-radius: 3px;
+        }
+
+        .jobflow-panel-body::-webkit-scrollbar-thumb:hover {
+          background: #46346B;
         }
 
         .jobflow-user-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 10px 12px;
-          background: #d1fae5;
-          border-radius: 8px;
-          margin-bottom: 12px;
-          border-left: 3px solid #10b981;
+          padding: 14px 16px;
+          background: white;
+          border-radius: 6px;
+          margin-bottom: 14px;
+          border-left: 4px solid #551BA4;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
 
         .jobflow-user-name {
           font-size: 14px;
           font-weight: 600;
-          color: #065f46;
+          color: #4A4A4A;
         }
 
         .jobflow-btn {
           width: 100%;
-          padding: 12px;
+          padding: 14px 20px;
           border: none;
-          border-radius: 8px;
+          border-radius: 6px;
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s;
-          margin-bottom: 8px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          margin-bottom: 10px;
+          font-family: 'Lato', sans-serif;
+          letter-spacing: 0.5px;
         }
 
         .jobflow-btn-primary {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: #551BA4;
           color: white;
+          box-shadow: 0 2px 8px rgba(85, 27, 164, 0.2);
         }
 
         .jobflow-btn-primary:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(85, 27, 164, 0.4);
+          background: #6a4feb;
+        }
+
+        .jobflow-btn-primary:active {
+          transform: translateY(0);
+          box-shadow: 0 2px 8px rgba(85, 27, 164, 0.2);
         }
 
         .jobflow-btn-primary:disabled {
-          opacity: 0.6;
+          opacity: 0.5;
           cursor: not-allowed;
           transform: none;
+          box-shadow: none;
         }
 
         .jobflow-btn-secondary {
           background: #f3f4f6;
-          color: #333;
+          color: #4A4A4A;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
 
         .jobflow-btn-secondary:hover {
           background: #e5e7eb;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.12);
         }
 
         .jobflow-btn-small {
@@ -172,24 +239,30 @@
         .jobflow-status {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 10px 12px;
-          background: #f0f9ff;
-          border-radius: 8px;
-          margin-bottom: 12px;
-          border-left: 3px solid #667eea;
+          gap: 10px;
+          padding: 12px 16px;
+          background: white;
+          border-radius: 6px;
+          margin-bottom: 14px;
+          border-left: 4px solid #10b981;
           font-size: 14px;
+          font-weight: 500;
+          color: #065f46;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
 
         .jobflow-form-count {
           display: none;
-          padding: 10px;
-          background: #ecfdf5;
+          padding: 12px 16px;
+          background: white;
           border-radius: 6px;
           margin-bottom: 14px;
           font-size: 14px;
           color: #065f46;
           text-align: center;
+          font-weight: 500;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+          border-left: 4px solid #10b981;
         }
 
         .jobflow-form-count.visible {
@@ -206,26 +279,32 @@
 
         .jobflow-login-container {
           text-align: center;
-          padding: 12px 0;
+          padding: 20px 0;
+          background: white;
+          border-radius: 6px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
 
         .jobflow-login-icon {
-          font-size: 64px;
-          margin-bottom: 16px;
+          font-size: 72px;
+          margin-bottom: 20px;
+          filter: drop-shadow(0 4px 8px rgba(85, 27, 164, 0.2));
         }
 
         .jobflow-login-title {
-          font-size: 20px;
+          font-size: 18px;
           font-weight: 700;
-          color: #333;
-          margin-bottom: 8px;
+          color: #4A4A4A;
+          margin-bottom: 10px;
+          letter-spacing: 0.5px;
         }
 
         .jobflow-login-subtitle {
           font-size: 13px;
-          color: #666;
-          margin-bottom: 16px;
-          line-height: 1.5;
+          color: #6b7280;
+          margin-bottom: 20px;
+          line-height: 1.6;
+          font-weight: 400;
         }
 
         .jobflow-feature-list {
@@ -273,8 +352,8 @@
 
       <div class="jobflow-panel-content">
         <div class="jobflow-panel-header">
-          <h1>⚡ JobFlow</h1>
-          <p>Intelligent Application Assistant</p>
+          <h1>JOBFLOW</h1>
+          <p>Your Intelligent Job Application Assistant</p>
         </div>
 
         <div class="jobflow-panel-body">
