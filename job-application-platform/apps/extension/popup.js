@@ -55,6 +55,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   loginBtn.addEventListener('click', () => {
     // Open web app login page
     chrome.tabs.create({ url: 'https://dusti.pro/login' });
+
+    // Show instruction message
+    const instructionDiv = document.getElementById('login-instruction');
+    if (instructionDiv) {
+      instructionDiv.style.display = 'block';
+    }
   });
 
   // Register link click
@@ -81,6 +87,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Check auth on load
   await checkAuthentication();
+
+  // Listen for cookie changes to detect login/logout
+  if (chrome.cookies && chrome.cookies.onChanged) {
+    chrome.cookies.onChanged.addListener((changeInfo) => {
+      // If the auth token cookie changed, re-check authentication
+      if (changeInfo.cookie.name === 'token' && changeInfo.cookie.domain.includes('dusti.pro')) {
+        checkAuthentication();
+      }
+    });
+  }
 
   // Only load features if authenticated
   if (!isAuthenticated) {
