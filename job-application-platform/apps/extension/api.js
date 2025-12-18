@@ -4,6 +4,24 @@
 const API_BASE_URL = 'https://dusti.pro';
 
 /**
+ * Get authentication token from cookies
+ * @returns {Promise<string|null>} - Token value or null
+ */
+async function getAuthToken() {
+  try {
+    // Use Chrome cookies API to get token from dusti.pro
+    const cookie = await chrome.cookies.get({
+      url: API_BASE_URL,
+      name: 'token'
+    });
+    return cookie ? cookie.value : null;
+  } catch (error) {
+    console.error('Error getting auth cookie:', error);
+    return null;
+  }
+}
+
+/**
  * Make an authenticated API request
  * @param {string} endpoint - API endpoint path
  * @param {object} options - Fetch options
@@ -12,12 +30,16 @@ const API_BASE_URL = 'https://dusti.pro';
 async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
 
+  // Get token from cookie
+  const token = await getAuthToken();
+
   const defaultOptions = {
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options.headers
     },
-    credentials: 'include' // Include cookies for authentication
+    credentials: 'include' // Still include for compatibility
   };
 
   const response = await fetch(url, { ...defaultOptions, ...options });
