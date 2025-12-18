@@ -107,7 +107,7 @@ jobs:
           # Application Configuration
           NODE_ENV=production
           APP_PORT=3000
-          CLIENT_URL=http://${{ env.VM_IP }}:3000
+          CLIENT_URL=https://${{ secrets.DOMAIN_NAME }}
           LOG_LEVEL=info
 
           # Authentication Secrets
