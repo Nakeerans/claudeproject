@@ -540,32 +540,41 @@
 
   // Check authentication
   async function checkAuthentication() {
+    console.log('JobFlow: Checking authentication...');
     try {
+      const token = await getAuthToken();
+      console.log('JobFlow: Token exists:', !!token);
+
       const authStatus = await window.JobFlowAPI.checkAuth();
+      console.log('JobFlow: Auth status:', authStatus);
 
       if (authStatus) {
         isAuthenticated = true;
 
         const authResponse = await fetch('https://dusti.pro/api/auth/me', {
           headers: {
-            'Authorization': `Bearer ${await getAuthToken()}`
+            'Authorization': `Bearer ${token}`
           }
         });
+
+        console.log('JobFlow: Auth response status:', authResponse.status);
 
         if (authResponse.ok) {
           const data = await authResponse.json();
           currentUser = data.user;
+          console.log('JobFlow: User authenticated:', currentUser?.email);
           document.getElementById('jobflow-user-name').textContent =
             currentUser?.name || currentUser?.email || 'User';
         }
 
         showMainPage();
       } else {
+        console.log('JobFlow: Not authenticated');
         isAuthenticated = false;
         showLoginPage();
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error('JobFlow: Auth check failed:', error);
       isAuthenticated = false;
       showLoginPage();
     }
