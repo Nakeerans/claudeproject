@@ -7,8 +7,7 @@
     "storage",
     "activeTab",
     "scripting",
-    "cookies",
-    "sidePanel"
+    "cookies"
   ],
   "host_permissions": [
     "https://*/*",
@@ -18,7 +17,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["api.js", "content.js"],
+      "js": ["api.js", "content.js", "floating-panel.js"],
       "run_at": "document_idle"
     }
   ],
@@ -26,9 +25,6 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Open JobFlow Side Panel"
-  },
-  "side_panel": {
-    "default_path": "sidepanel.html"
+    "default_title": "Toggle JobFlow Panel"
   }
 }
