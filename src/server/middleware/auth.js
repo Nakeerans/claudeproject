@@ -6,8 +6,12 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 
 export const authenticateToken = async (req, res, next) => {
   try {
+    // Check for token in Authorization header (for web app) or cookie (for extension)
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const headerToken = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const cookieToken = req.cookies?.token;
+
+    const token = headerToken || cookieToken;
 
     if (!token) {
       return res.status(401).json({ error: 'Access token required' });

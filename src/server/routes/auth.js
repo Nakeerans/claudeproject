@@ -47,6 +47,14 @@ router.post('/register', async (req, res) => {
     // Generate token
     const token = generateToken(user.id);
 
+    // Set token as HttpOnly cookie for extension access
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
     logger.info(`User registered: ${email}`);
 
     res.status(201).json({
@@ -82,6 +90,14 @@ router.post('/login', async (req, res) => {
 
     // Generate token
     const token = generateToken(user.id);
+
+    // Set token as HttpOnly cookie for extension access
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
 
     logger.info(`User logged in: ${email}`);
 
@@ -183,6 +199,14 @@ router.post('/google', async (req, res) => {
     // Generate JWT token
     const token = generateToken(user.id);
 
+    // Set token as HttpOnly cookie for extension access
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
     res.json({
       user: {
         id: user.id,
@@ -221,6 +245,8 @@ router.get('/check', authenticateToken, (req, res) => {
 
 // Logout
 router.post('/logout', (req, res) => {
+  // Clear the auth cookie
+  res.clearCookie('token');
   res.json({ message: 'Logged out successfully' });
 });
 
