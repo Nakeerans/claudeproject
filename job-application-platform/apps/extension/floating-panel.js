@@ -624,13 +624,23 @@
 
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === 'TOGGLE_FLOATING_PANEL') {
-      if (!panelContainer) {
-        createPanel();
+    try {
+      if (message.type === 'TOGGLE_FLOATING_PANEL') {
+        if (!panelContainer) {
+          createPanel();
+        }
+        // Trigger toggle
+        const toggleBtn = document.getElementById('jobflow-toggle');
+        if (toggleBtn) {
+          toggleBtn.click();
+        }
       }
-      // Trigger toggle
-      document.getElementById('jobflow-toggle').click();
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error('Error handling message:', error);
+      sendResponse({ success: false, error: error.message });
     }
+    return true; // Keep message channel open
   });
 
   // Create panel on load
