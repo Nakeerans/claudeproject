@@ -2,10 +2,90 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Get references to UI elements
+  const loginPage = document.getElementById('login-page');
+  const mainPage = document.getElementById('main-page');
   const autofillBtn = document.getElementById('autofill-btn');
   const recordBtn = document.getElementById('record-btn');
   const formCountDiv = document.getElementById('form-count');
   const openWebappLink = document.getElementById('open-webapp');
+  const loginBtn = document.getElementById('login-btn');
+  const registerLink = document.getElementById('register-link');
+  const logoutBtn = document.getElementById('logout-btn');
+  const userNameSpan = document.getElementById('user-name');
+
+  // State
+  let isAuthenticated = false;
+  let currentUser = null;
+
+  // Page navigation functions
+  function showLoginPage() {
+    loginPage.classList.add('active');
+    mainPage.classList.remove('active');
+  }
+
+  function showMainPage() {
+    loginPage.classList.remove('active');
+    mainPage.classList.add('active');
+  }
+
+  // Check authentication status
+  async function checkAuthentication() {
+    try {
+      const authStatus = await window.JobFlowAPI.checkAuth();
+
+      if (authStatus) {
+        // User is logged in, get profile
+        const profile = await window.JobFlowAPI.getProfile();
+        currentUser = profile.user;
+        isAuthenticated = true;
+        userNameSpan.textContent = currentUser?.name || currentUser?.email || 'User';
+        showMainPage();
+      } else {
+        isAuthenticated = false;
+        showLoginPage();
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      isAuthenticated = false;
+      showLoginPage();
+    }
+  }
+
+  // Login button click
+  loginBtn.addEventListener('click', () => {
+    // Open web app login page
+    chrome.tabs.create({ url: 'http://4.157.253.229:3000/login' });
+  });
+
+  // Register link click
+  registerLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: 'http://4.157.253.229:3000/register' });
+  });
+
+  // Logout button click
+  logoutBtn.addEventListener('click', async () => {
+    try {
+      // Call logout API
+      await fetch('http://4.157.253.229:3000/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      isAuthenticated = false;
+      currentUser = null;
+      showLoginPage();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  });
+
+  // Check auth on load
+  await checkAuthentication();
+
+  // Only load features if authenticated
+  if (!isAuthenticated) {
+    return; // Stop here if not logged in
+  }
 
   // Get current tab
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -44,30 +124,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Autofill button click
   autofillBtn.addEventListener('click', async () => {
+    if (!isAuthenticated) {
+      alert('Please log in first to use autofill!');
+      return;
+    }
+
     autofillBtn.disabled = true;
     autofillBtn.textContent = '⏳ Autofilling...';
 
     try {
-      // In a real implementation, this would:
-      // 1. Get user profile from storage/API
-      // 2. Get learned pattern for this site
-      // 3. Send autofill command to content script
+      // 1. Get user profile from API
+      const profileData = await window.JobFlowAPI.getProfile();
 
-      // For now, just show a message
+      // 2. Get learned patterns for this site
+      const patterns = await window.JobFlowAPI.getPatterns(tab.url);
+
+      // 3. Send autofill command to content script with profile data
+      await chrome.tabs.sendMessage(tab.id, {
+        type: 'AUTOFILL',
+        profile: profileData,
+        patterns: patterns
+      });
+
+      autofillBtn.textContent = '✓ Autofilled!';
       setTimeout(() => {
-        alert(
-          'Autofill functionality:\n\n' +
-          '1. Will fetch your profile data\n' +
-          '2. Check for learned patterns for this site\n' +
-          '3. Automatically fill all detected fields\n\n' +
-          'Connect to the web app to set up your profile!'
-        );
-
         autofillBtn.textContent = 'Autofill Current Page';
         autofillBtn.disabled = false;
-      }, 500);
+      }, 2000);
     } catch (error) {
       console.error('Autofill error:', error);
+      alert(
+        `Autofill failed: ${error.message}\n\n` +
+        'Make sure you have:\n' +
+        '1. Completed your profile in Settings\n' +
+        '2. Refreshed this page after logging in'
+      );
       autofillBtn.textContent = 'Autofill Current Page';
       autofillBtn.disabled = false;
     }
