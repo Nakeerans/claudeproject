@@ -34,11 +34,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       const authStatus = await window.JobFlowAPI.checkAuth();
 
       if (authStatus) {
-        // User is logged in, get profile
-        const profile = await window.JobFlowAPI.getProfile();
-        currentUser = profile.user;
+        // User is logged in
         isAuthenticated = true;
-        userNameSpan.textContent = currentUser?.name || currentUser?.email || 'User';
+
+        // Get user info from auth check response
+        const authResponse = await fetch('https://dusti.pro/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${await getAuthToken()}`
+          }
+        });
+
+        if (authResponse.ok) {
+          const data = await authResponse.json();
+          currentUser = data.user;
+          userNameSpan.textContent = currentUser?.name || currentUser?.email || 'User';
+        } else {
+          userNameSpan.textContent = 'User';
+        }
+
         showMainPage();
       } else {
         isAuthenticated = false;
@@ -48,6 +61,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Auth check failed:', error);
       isAuthenticated = false;
       showLoginPage();
+    }
+  }
+
+  // Helper to get auth token from cookie
+  async function getAuthToken() {
+    try {
+      const cookie = await chrome.cookies.get({
+        url: 'https://dusti.pro',
+        name: 'token'
+      });
+      return cookie ? cookie.value : null;
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
     }
   }
 
