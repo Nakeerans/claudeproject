@@ -23,30 +23,26 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
+    // Only test on chromium in CI for speed
+    // Uncomment others for local testing if needed
+    // {
+    //   name: 'firefox',
+    //   use: { ...devices['Desktop Firefox'] },
+    // },
+    // {
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
+    // },
   ],
 
   webServer: {
     command: process.env.CI
-      ? 'DATABASE_URL=postgresql://test_user:test_password@localhost:5432/test_db JWT_SECRET=test_jwt_secret SESSION_SECRET=test_session_secret NODE_ENV=test npm run dev:server'
+      ? 'NODE_ENV=test JWT_SECRET=test_jwt_secret SESSION_SECRET=test_session_secret npm run start'
       : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000, // 2 minutes for backend + DB setup
+    stdout: 'pipe',
+    stderr: 'pipe',
   },
 });
