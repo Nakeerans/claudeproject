@@ -24,21 +24,8 @@
 
         #jobflow-floating-panel {
           position: fixed;
-          top: 30px;
-          right: 30px;
           z-index: 2147483647;
           font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        #jobflow-floating-panel.expanded {
-          opacity: 1;
-          visibility: visible;
-        }
-
-        #jobflow-floating-panel.collapsed {
-          opacity: 0;
-          visibility: hidden;
         }
 
         .jobflow-toggle-btn {
@@ -58,7 +45,9 @@
           font-size: 28px;
           box-shadow: 0px 4px 20px rgba(85, 27, 164, 0.4);
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          z-index: 2147483646;
+          z-index: 2147483647;
+          opacity: 1 !important;
+          visibility: visible !important;
         }
 
         .jobflow-toggle-btn:hover {
@@ -69,11 +58,6 @@
 
         .jobflow-toggle-btn:active {
           transform: scale(0.95);
-        }
-
-        #jobflow-floating-panel.collapsed .jobflow-toggle-btn {
-          opacity: 1;
-          visibility: visible;
         }
 
         #jobflow-floating-panel.expanded .jobflow-toggle-btn {
@@ -87,6 +71,9 @@
         }
 
         .jobflow-panel-content {
+          position: fixed;
+          top: 30px;
+          right: 30px;
           width: 380px;
           height: 90vh;
           max-height: 650px;
@@ -97,13 +84,17 @@
           flex-direction: column;
           overflow: hidden;
           opacity: 0;
+          visibility: hidden;
           transform: translateY(-20px);
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          pointer-events: none;
         }
 
         #jobflow-floating-panel.expanded .jobflow-panel-content {
           opacity: 1;
+          visibility: visible;
           transform: translateY(0);
+          pointer-events: auto;
         }
 
         .jobflow-panel-header {
