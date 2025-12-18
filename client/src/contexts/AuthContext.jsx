@@ -28,15 +28,20 @@ export const AuthProvider = ({ children }) => {
   // Check authentication status on mount
   useEffect(() => {
     const checkAuth = async () => {
-      if (!token) {
-        setLoading(false)
-        return
-      }
-
       try {
-        const response = await axios.get('/api/auth/me')
+        // Try to get user info - will work with either localStorage token or cookie
+        const response = await axios.get('/api/auth/me', {
+          withCredentials: true // Send cookies
+        })
         setUser(response.data.user)
+
+        // If we got user but no localStorage token, we're authenticated via cookie
+        if (!token) {
+          // Optionally store token from response if backend sends it
+          setLoading(false)
+        }
       } catch (error) {
+        // Not authenticated - clear everything
         console.error('Auth check failed:', error)
         localStorage.removeItem('token')
         setToken(null)
@@ -47,7 +52,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     checkAuth()
-  }, [token])
+  }, []) // Run only once on mount
 
   const login = async (email, password) => {
     try {

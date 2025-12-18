@@ -29,7 +29,21 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests from web app, extensions, and no origin (like mobile apps)
+    const allowedOrigins = [
+      process.env.CLIENT_URL || 'http://localhost:5173',
+      'https://dusti.pro',
+      'http://localhost:5173'
+    ];
+
+    // Allow Chrome extension origins (chrome-extension://...)
+    if (!origin || allowedOrigins.includes(origin) || origin.startsWith('chrome-extension://')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
