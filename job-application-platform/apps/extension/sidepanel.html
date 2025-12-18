@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>JobFlow</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 100%;
+      min-height: 100vh;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .tagline {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .content {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      color: #333;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      min-height: 400px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: #f0f9ff;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      border-left: 3px solid #667eea;
+    }
+
+    .status-icon {
+      font-size: 18px;
+    }
+
+    .status-text {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+    }
+
+    .button-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .button-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .button-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .button-secondary {
+      background: #f3f4f6;
+      color: #333;
+    }
+
+    .button-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .info {
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 11px;
+      opacity: 0.8;
+    }
+
+    .link {
+      color: white;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+    }
+
+    .link:hover {
+      border-bottom-color: white;
+    }
+
+    #form-count {
+      display: none;
+      padding: 10px;
+      background: #ecfdf5;
+      border-radius: 6px;
+      margin-bottom: 14px;
+      font-size: 14px;
+      color: #065f46;
+      text-align: center;
+    }
+
+    #form-count.visible {
+      display: block;
+    }
+
+    /* Page views */
+    .page-view {
+      display: none;
+    }
+
+    .page-view.active {
+      display: block;
+    }
+
+    /* Login Page Specific Styles */
+    .login-container {
+      text-align: center;
+      padding: 12px 0;
+    }
+
+    .login-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .login-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .login-subtitle {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .feature-list {
+      text-align: left;
+      margin: 20px 0;
+      padding: 0 12px;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .feature-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    /* Main Page Specific Styles */
+    .user-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: #d1fae5;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      border-left: 3px solid #10b981;
+    }
+
+    .user-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #065f46;
+    }
+
+    .button-logout {
+      padding: 8px 14px;
+      font-size: 13px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .button-logout:hover {
+      background: #fecaca;
+    }
+
+    #login-instruction {
+      display: none;
+      margin-top: 12px;
+      padding: 10px;
+      background: #e0f2fe;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #0369a1;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚡ JobFlow</h1>
+    <p class="tagline">Intelligent Application Assistant</p>
+  </div>
+
+  <!-- LOGIN PAGE -->
+  <div id="login-page" class="page-view content">
+    <div class="login-container">
+      <div class="login-icon">🔐</div>
+      <h2 class="login-title">Welcome to JobFlow</h2>
+      <p class="login-subtitle">
+        Sign in to unlock powerful autofill features and save hours on job applications
+      </p>
+
+      <div class="feature-list">
+        <div class="feature-item">
+          <span class="feature-icon">✨</span>
+          <span>One-click autofill for any job application</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🎯</span>
+          <span>Smart form detection and field mapping</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">📊</span>
+          <span>Track all your applications in one place</span>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon">🔒</span>
+          <span>Your data is secure and private</span>
+        </div>
+      </div>
+
+      <button id="login-btn" class="button button-primary" style="margin-top: 16px;">
+        Log In to JobFlow
+      </button>
+
+      <div id="login-instruction">
+        ✓ Login page opened! After logging in, this panel will automatically update to show your account.
+      </div>
+
+      <div class="info" style="margin-top: 14px; font-size: 11px;">
+        Don't have an account?
+        <a href="#" id="register-link" style="color: #667eea; font-weight: 600;">Sign up</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN FEATURES PAGE -->
+  <div id="main-page" class="page-view content">
+    <!-- User Header -->
+    <div class="user-header">
+      <div>
+        <div style="font-size: 12px; color: #059669; margin-bottom: 2px;">Logged in as</div>
+        <span class="user-name" id="user-name">Loading...</span>
+      </div>
+      <button id="logout-btn" class="button-logout">
+        Logout
+      </button>
+    </div>
+
+    <div class="status">
+      <span class="status-icon">✅</span>
+      <span class="status-text">Extension Active</span>
+    </div>
+
+    <div id="form-count"></div>
+
+    <button id="autofill-btn" class="button button-primary">
+      Autofill Current Page
+    </button>
+
+    <button id="record-btn" class="button button-secondary">
+      Start Learning Mode
+    </button>
+
+    <div class="info">
+      Visit a job application page to start autofilling. This panel will stay open while you browse.
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="#" class="link" id="open-webapp">Open Web App</a>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
