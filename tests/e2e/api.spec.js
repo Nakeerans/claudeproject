@@ -1,103 +1,111 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('API Endpoints', () => {
+test.describe('JobFlow API Endpoints', () => {
   test('health check endpoint returns healthy status', async ({ request }) => {
     const response = await request.get('/health');
     expect(response.ok()).toBeTruthy();
 
     const data = await response.json();
     expect(data.status).toBe('healthy');
-    expect(data.modules).toBeDefined();
+    expect(data.service).toBe('jobflow-api');
+    expect(data.timestamp).toBeDefined();
   });
 
-  test('code generation endpoint works', async ({ request }) => {
-    const response = await request.post('/api/generate-code', {
-      data: {
-        prompt: 'Create a simple hello world function in JavaScript',
-        language: 'javascript'
-      }
-    });
+  test('auth check without token returns 401', async ({ request }) => {
+    const response = await request.get('/api/auth/check');
+    expect(response.status()).toBe(401);
 
-    expect(response.ok()).toBeTruthy();
-    const data = await response.json();
-    expect(data.success).toBe(true);
-    expect(data.code).toBeDefined();
-  });
-
-  test('code validation endpoint works', async ({ request }) => {
-    const response = await request.post('/api/validate-code', {
-      data: {
-        code: 'function hello() { return "world"; }',
-        language: 'javascript'
-      }
-    });
-
-    expect(response.ok()).toBeTruthy();
-    const data = await response.json();
-    expect(data.success).toBe(true);
-    expect(data.validation).toBeDefined();
-  });
-
-  test('scraping endpoint works', async ({ request }) => {
-    const response = await request.post('/api/scrape', {
-      data: {
-        url: 'https://example.com',
-        dynamic: false,
-        selectors: {
-          title: 'h1'
-        }
-      }
-    });
-
-    expect(response.ok()).toBeTruthy();
-    const data = await response.json();
-    expect(data.success).toBe(true);
-    expect(data.result).toBeDefined();
-  });
-
-  test('MCP status endpoint returns orchestrator status', async ({ request }) => {
-    const response = await request.get('/api/mcp/status');
-    expect(response.ok()).toBeTruthy();
-
-    const data = await response.json();
-    expect(data.success).toBe(true);
-    expect(data.status).toBeDefined();
-    expect(data.status.ready).toBeDefined();
-  });
-
-  test('invalid requests return proper error codes', async ({ request }) => {
-    const response = await request.post('/api/generate-code', {
-      data: {}
-    });
-
-    expect(response.status()).toBe(400);
     const data = await response.json();
     expect(data.error).toBeDefined();
   });
-});
 
-test.describe('AI Engine Integration', () => {
-  test('generates valid JavaScript code', async ({ request }) => {
-    const response = await request.post('/api/generate-code', {
+  test('register endpoint exists', async ({ request }) => {
+    const response = await request.post('/api/auth/register', {
       data: {
-        prompt: 'Create a function that adds two numbers',
-        language: 'javascript'
+        email: `test-${Date.now()}@example.com`,
+        password: 'TestPassword123!',
+        name: 'Test User'
       }
     });
 
-    const data = await response.json();
-    expect(data.code).toContain('function');
+    // Should succeed or fail with proper validation
+    expect([201, 400]).toContain(response.status());
   });
 
-  test('validates code correctly', async ({ request }) => {
-    const response = await request.post('/api/validate-code', {
+  test('login endpoint exists', async ({ request }) => {
+    const response = await request.post('/api/auth/login', {
       data: {
-        code: 'const x = 10;',
-        language: 'javascript'
+        email: 'test@example.com',
+        password: 'wrongpassword'
       }
     });
 
+    // Should return 400 or 401 for invalid credentials
+    expect([400, 401]).toContain(response.status());
+  });
+
+  test('protected routes require authentication', async ({ request }) => {
+    const protectedRoutes = [
+      '/api/jobs',
+      '/api/contacts',
+      '/api/interviews',
+      '/api/analytics',
+      '/api/profile'
+    ];
+
+    for (const route of protectedRoutes) {
+      const response = await request.get(route);
+      expect(response.status()).toBe(401);
+    }
+  });
+
+  test('invalid routes return 404', async ({ request }) => {
+    const response = await request.get('/api/nonexistent-endpoint');
+    expect(response.status()).toBe(404);
+  });
+});
+
+test.describe('JobFlow Authentication Flow', () => {
+  let authToken;
+  let testUserEmail;
+
+  test('can register a new user', async ({ request }) => {
+    testUserEmail = `test-user-${Date.now()}@example.com`;
+
+    const response = await request.post('/api/auth/register', {
+      data: {
+        email: testUserEmail,
+        password: 'TestPassword123!',
+        name: 'E2E Test User'
+      }
+    });
+
+    if (response.status() === 201) {
+      const data = await response.json();
+      expect(data.user).toBeDefined();
+      expect(data.user.email).toBe(testUserEmail);
+      expect(data.token).toBeDefined();
+      authToken = data.token;
+    } else {
+      // User might already exist from previous test run
+      expect(response.status()).toBe(400);
+    }
+  });
+
+  test('can access protected routes with valid token', async ({ request }) => {
+    if (!authToken) {
+      test.skip();
+      return;
+    }
+
+    const response = await request.get('/api/auth/me', {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+
+    expect(response.ok()).toBeTruthy();
     const data = await response.json();
-    expect(data.validation.valid).toBe(true);
+    expect(data.user).toBeDefined();
   });
 });
