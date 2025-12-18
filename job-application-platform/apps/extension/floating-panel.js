@@ -552,9 +552,8 @@
         isAuthenticated = true;
 
         const authResponse = await fetch('https://dusti.pro/api/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          credentials: 'include',
+          mode: 'cors'
         });
 
         console.log('JobFlow: Auth response status:', authResponse.status);
@@ -580,18 +579,11 @@
     }
   }
 
-  // Get auth token
+  // Get auth token (not available in content script, use credentials: 'include' instead)
   async function getAuthToken() {
-    try {
-      const cookie = await chrome.cookies.get({
-        url: 'https://dusti.pro',
-        name: 'token'
-      });
-      return cookie ? cookie.value : null;
-    } catch (error) {
-      console.error('Error getting auth token:', error);
-      return null;
-    }
+    // In content script context, chrome.cookies API is not available
+    // We rely on credentials: 'include' to send cookies automatically
+    return null;
   }
 
   // Show login page

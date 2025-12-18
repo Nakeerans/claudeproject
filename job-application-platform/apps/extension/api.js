@@ -4,17 +4,22 @@
 const API_BASE_URL = 'https://dusti.pro';
 
 /**
- * Get authentication token from cookies
+ * Get authentication token from cookies (via background script)
  * @returns {Promise<string|null>} - Token value or null
  */
 async function getAuthToken() {
   try {
-    // Use Chrome cookies API to get token from dusti.pro
-    const cookie = await chrome.cookies.get({
-      url: API_BASE_URL,
-      name: 'token'
-    });
-    return cookie ? cookie.value : null;
+    // Check if we have access to chrome.cookies (background/popup context)
+    if (chrome.cookies) {
+      const cookie = await chrome.cookies.get({
+        url: API_BASE_URL,
+        name: 'token'
+      });
+      return cookie ? cookie.value : null;
+    }
+    // In content script context, we can't access chrome.cookies
+    // Return null and rely on credentials: 'include'
+    return null;
   } catch (error) {
     console.error('Error getting auth cookie:', error);
     return null;
@@ -30,7 +35,7 @@ async function getAuthToken() {
 async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
 
-  // Get token from cookie
+  // Try to get token from cookie (works in background/popup, not content script)
   const token = await getAuthToken();
 
   const defaultOptions = {
@@ -39,7 +44,8 @@ async function apiRequest(endpoint, options = {}) {
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options.headers
     },
-    credentials: 'include' // Still include for compatibility
+    credentials: 'include', // Send cookies automatically
+    mode: 'cors' // Allow cross-origin requests
   };
 
   const response = await fetch(url, { ...defaultOptions, ...options });
