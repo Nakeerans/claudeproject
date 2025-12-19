@@ -14,11 +14,16 @@
   let isExtensionActive = false; // Extension on/off state
 
   // Create the floating panel
-  function createPanel() {
+  function createPanel(startHidden = false) {
     if (panelContainer) return;
 
     panelContainer = document.createElement('div');
     panelContainer.id = 'jobflow-floating-panel';
+
+    // Start hidden if specified
+    if (startHidden) {
+      panelContainer.style.display = 'none';
+    }
     panelContainer.innerHTML = `
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap');
@@ -537,8 +542,7 @@
       }
     });
 
-    // Initialize - hide completely on page load
-    panelContainer.style.display = 'none';
+    // Initialize - start hidden, wait for extension icon click
     isExtensionActive = false;
     isExpanded = false;
     checkAuthentication();
@@ -668,9 +672,9 @@
     return true; // Keep message channel open
   });
 
-  // Create panel on load
-  createPanel();
+  // Create panel on load (but keep it hidden initially)
+  createPanel(true); // Start hidden
 
   // Debug: Log that the panel was created
-  console.log('JobFlow: Floating panel loaded and initialized');
+  console.log('JobFlow: Floating panel loaded and ready (hidden until extension icon is clicked)');
 })();
