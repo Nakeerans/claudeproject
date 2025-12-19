@@ -30,21 +30,42 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests from web app, extensions, and no origin (like mobile apps)
+    logger.info('CORS request from origin:', origin);
+
+    // Allow requests with no origin (like mobile apps, Postman, or same-origin)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Allow requests from web app
     const allowedOrigins = [
       process.env.CLIENT_URL || 'http://localhost:5173',
       'https://dusti.pro',
-      'http://localhost:5173'
+      'http://localhost:5173',
+      'http://localhost:3000'
     ];
 
-    // Allow Chrome extension origins (chrome-extension://...)
-    if (!origin || allowedOrigins.includes(origin) || origin.startsWith('chrome-extension://')) {
+    // Allow browser extension origins
+    if (origin.startsWith('chrome-extension://') ||
+        origin.startsWith('edge-extension://') ||
+        origin.startsWith('moz-extension://')) {
+      return callback(null, true);
+    }
+
+    // Check if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      logger.warn('CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400, // 24 hours
+  optionsSuccessStatus: 200
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
