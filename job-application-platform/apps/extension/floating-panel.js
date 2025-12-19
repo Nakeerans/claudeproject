@@ -643,14 +643,14 @@
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     try {
       if (message.type === 'TOGGLE_EXTENSION_STATE') {
-        if (!panelContainer) {
-          createPanel();
-        }
-
         isExtensionActive = message.isEnabled;
 
         if (isExtensionActive) {
-          // Extension turned ON - show button only (collapsed state)
+          // Extension turned ON - create panel if not exists and show button
+          if (!panelContainer) {
+            createPanel(false); // Create panel (not hidden)
+          }
+
           console.log('JobFlow: Extension turned ON');
           panelContainer.style.display = 'block';
           panelContainer.classList.remove('expanded');
@@ -658,10 +658,12 @@
           isExpanded = false;
         } else {
           // Extension turned OFF - hide everything
-          console.log('JobFlow: Extension turned OFF');
-          panelContainer.style.display = 'none';
-          panelContainer.classList.remove('expanded', 'collapsed');
-          isExpanded = false;
+          if (panelContainer) {
+            console.log('JobFlow: Extension turned OFF');
+            panelContainer.style.display = 'none';
+            panelContainer.classList.remove('expanded', 'collapsed');
+            isExpanded = false;
+          }
         }
       }
       sendResponse({ success: true });
@@ -672,9 +674,6 @@
     return true; // Keep message channel open
   });
 
-  // Create panel on load (but keep it hidden initially)
-  createPanel(true); // Start hidden
-
-  // Debug: Log that the panel was created
-  console.log('JobFlow: Floating panel loaded and ready (hidden until extension icon is clicked)');
+  // Don't create panel automatically - wait for extension icon click
+  console.log('JobFlow: Floating panel script loaded and ready');
 })();
