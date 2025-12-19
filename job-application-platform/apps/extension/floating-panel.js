@@ -442,27 +442,21 @@
     const autofillBtn = document.getElementById('jobflow-autofill-btn');
     const recordBtn = document.getElementById('jobflow-record-btn');
 
-    // Toggle panel - First click: show panel, Second click: collapse panel, Third click: hide everything
+    // Toggle panel expand/collapse (when floating button on page is clicked)
     toggleBtn.addEventListener('click', () => {
-      if (!isExtensionActive) {
-        // First click: Turn on extension and show panel
-        isExtensionActive = true;
+      if (isExpanded) {
+        // Collapse panel (show only button)
+        isExpanded = false;
+        panelContainer.classList.remove('expanded');
+        panelContainer.classList.add('collapsed');
+      } else {
+        // Expand panel
         isExpanded = true;
         panelContainer.classList.remove('collapsed');
         panelContainer.classList.add('expanded');
         if (isAuthenticated) {
           updateFormDetection();
         }
-      } else if (isExpanded) {
-        // Second click: Collapse panel but keep button visible
-        isExpanded = false;
-        panelContainer.classList.remove('expanded');
-        panelContainer.classList.add('collapsed');
-      } else {
-        // Third click: Turn off extension completely (hide everything)
-        isExtensionActive = false;
-        isExpanded = false;
-        panelContainer.style.display = 'none';
       }
     });
 
@@ -644,20 +638,26 @@
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     try {
-      if (message.type === 'TOGGLE_FLOATING_PANEL') {
+      if (message.type === 'TOGGLE_EXTENSION_STATE') {
         if (!panelContainer) {
           createPanel();
         }
 
-        // Show the panel container if hidden
-        if (panelContainer.style.display === 'none') {
-          panelContainer.style.display = 'block';
-        }
+        isExtensionActive = message.isEnabled;
 
-        // Trigger toggle
-        const toggleBtn = document.getElementById('jobflow-toggle');
-        if (toggleBtn) {
-          toggleBtn.click();
+        if (isExtensionActive) {
+          // Extension turned ON - show button only (collapsed state)
+          console.log('JobFlow: Extension turned ON');
+          panelContainer.style.display = 'block';
+          panelContainer.classList.remove('expanded');
+          panelContainer.classList.add('collapsed');
+          isExpanded = false;
+        } else {
+          // Extension turned OFF - hide everything
+          console.log('JobFlow: Extension turned OFF');
+          panelContainer.style.display = 'none';
+          panelContainer.classList.remove('expanded', 'collapsed');
+          isExpanded = false;
         }
       }
       sendResponse({ success: true });
