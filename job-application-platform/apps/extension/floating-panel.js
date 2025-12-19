@@ -468,34 +468,11 @@
     // Login button
     loginBtn.addEventListener('click', async () => {
       // Open login page in new tab
-      const loginTab = window.open('https://dusti.pro/login?extensionLogin=true', '_blank');
-      document.getElementById('jobflow-login-instruction').style.display = 'block';
+      window.open('https://dusti.pro/login', '_blank');
 
-      // Start polling for authentication
-      const pollInterval = setInterval(async () => {
-        try {
-          const authStatus = await window.JobFlowAPI.checkAuth();
-          if (authStatus) {
-            clearInterval(pollInterval);
-            document.getElementById('jobflow-login-instruction').textContent = '✓ Login successful! Refreshing...';
-
-            // Re-check authentication to get user data
-            await checkAuthentication();
-
-            if (loginTab && !loginTab.closed) {
-              loginTab.close();
-            }
-          }
-        } catch (error) {
-          // Ignore errors during polling
-        }
-      }, 2000); // Poll every 2 seconds
-
-      // Stop polling after 5 minutes
-      setTimeout(() => {
-        clearInterval(pollInterval);
-        document.getElementById('jobflow-login-instruction').style.display = 'none';
-      }, 5 * 60 * 1000);
+      const instructionDiv = document.getElementById('jobflow-login-instruction');
+      instructionDiv.style.display = 'block';
+      instructionDiv.textContent = '✓ Login page opened! After logging in, this panel will automatically update.';
     });
 
     // Register link
@@ -652,6 +629,31 @@
       formCountDiv.style.background = '#f3f4f6';
       formCountDiv.style.color = '#666';
     }
+  }
+
+  // Listen for chrome.storage changes (token added from another tab)
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'local' && changes.jobflow_auth_token) {
+        console.log('JobFlow: Token changed in storage!', changes.jobflow_auth_token);
+
+        if (changes.jobflow_auth_token.newValue) {
+          // Token was added or updated
+          console.log('JobFlow: New token detected, re-checking authentication...');
+          if (panelContainer) {
+            checkAuthentication();
+          }
+        } else if (!changes.jobflow_auth_token.newValue && changes.jobflow_auth_token.oldValue) {
+          // Token was removed (logout)
+          console.log('JobFlow: Token removed, showing login page');
+          if (panelContainer) {
+            isAuthenticated = false;
+            currentUser = null;
+            showLoginPage();
+          }
+        }
+      }
+    });
   }
 
   // Listen for messages from background script
