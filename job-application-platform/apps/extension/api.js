@@ -9,19 +9,20 @@ const API_BASE_URL = 'https://dusti.pro';
  */
 async function getAuthToken() {
   try {
-    // Check if we have access to chrome.cookies (background/popup context)
-    if (chrome.cookies) {
+    // Check if chrome.cookies exists and is available
+    if (typeof chrome !== 'undefined' && chrome.cookies && typeof chrome.cookies.get === 'function') {
       const cookie = await chrome.cookies.get({
         url: API_BASE_URL,
         name: 'token'
       });
       return cookie ? cookie.value : null;
     }
-    // In content script context, we can't access chrome.cookies
+    // In content script context, chrome.cookies is not available
     // Return null and rely on credentials: 'include'
+    console.log('JobFlow: chrome.cookies not available, using credentials mode');
     return null;
   } catch (error) {
-    console.error('Error getting auth cookie:', error);
+    console.log('JobFlow: Could not access cookies API, using credentials mode');
     return null;
   }
 }

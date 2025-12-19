@@ -581,9 +581,22 @@
 
   // Get auth token (not available in content script, use credentials: 'include' instead)
   async function getAuthToken() {
-    // In content script context, chrome.cookies API is not available
-    // We rely on credentials: 'include' to send cookies automatically
-    return null;
+    try {
+      // Check if chrome.cookies exists and is available
+      if (typeof chrome !== 'undefined' && chrome.cookies && typeof chrome.cookies.get === 'function') {
+        const cookie = await chrome.cookies.get({
+          url: 'https://dusti.pro',
+          name: 'token'
+        });
+        return cookie ? cookie.value : null;
+      }
+      // In content script context, chrome.cookies API is not available
+      // We rely on credentials: 'include' to send cookies automatically
+      return null;
+    } catch (error) {
+      console.log('JobFlow: Could not access cookies, using credentials mode');
+      return null;
+    }
   }
 
   // Show login page
