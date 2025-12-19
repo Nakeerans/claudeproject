@@ -466,9 +466,36 @@
     });
 
     // Login button
-    loginBtn.addEventListener('click', () => {
-      window.open('https://dusti.pro/login', '_blank');
+    loginBtn.addEventListener('click', async () => {
+      // Open login page in new tab
+      const loginTab = window.open('https://dusti.pro/login?extensionLogin=true', '_blank');
       document.getElementById('jobflow-login-instruction').style.display = 'block';
+
+      // Start polling for authentication
+      const pollInterval = setInterval(async () => {
+        try {
+          const authStatus = await window.JobFlowAPI.checkAuth();
+          if (authStatus) {
+            clearInterval(pollInterval);
+            document.getElementById('jobflow-login-instruction').textContent = '✓ Login successful! Refreshing...';
+
+            // Re-check authentication to get user data
+            await checkAuthentication();
+
+            if (loginTab && !loginTab.closed) {
+              loginTab.close();
+            }
+          }
+        } catch (error) {
+          // Ignore errors during polling
+        }
+      }, 2000); // Poll every 2 seconds
+
+      // Stop polling after 5 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        document.getElementById('jobflow-login-instruction').style.display = 'none';
+      }, 5 * 60 * 1000);
     });
 
     // Register link
@@ -480,13 +507,19 @@
     // Logout button
     logoutBtn.addEventListener('click', async () => {
       try {
+        // Remove token from storage
+        await window.JobFlowAPI.removeAuthToken();
+
+        // Clear server-side session
         await fetch('https://dusti.pro/api/auth/logout', {
           method: 'POST',
-          credentials: 'include'
+          mode: 'cors'
         });
+
         isAuthenticated = false;
         currentUser = null;
         showLoginPage();
+        console.log('JobFlow: Logged out successfully');
       } catch (error) {
         console.error('Logout failed:', error);
       }
@@ -552,33 +585,35 @@
   async function checkAuthentication() {
     console.log('JobFlow: Checking authentication...');
     try {
-      const token = await getAuthToken();
+      const token = await window.JobFlowAPI.getAuthToken();
       console.log('JobFlow: Token exists:', !!token);
 
+      if (!token) {
+        console.log('JobFlow: No token found');
+        isAuthenticated = false;
+        showLoginPage();
+        return;
+      }
+
+      // Verify token is valid by calling /api/auth/check
       const authStatus = await window.JobFlowAPI.checkAuth();
       console.log('JobFlow: Auth status:', authStatus);
 
       if (authStatus) {
         isAuthenticated = true;
 
-        const authResponse = await fetch('https://dusti.pro/api/auth/me', {
-          credentials: 'include',
-          mode: 'cors'
-        });
-
-        console.log('JobFlow: Auth response status:', authResponse.status);
-
-        if (authResponse.ok) {
-          const data = await authResponse.json();
-          currentUser = data.user;
-          console.log('JobFlow: User authenticated:', currentUser?.email);
-          document.getElementById('jobflow-user-name').textContent =
-            currentUser?.name || currentUser?.email || 'User';
-        }
+        // Get user data
+        const authResponse = await window.JobFlowAPI.apiRequest('/api/auth/me');
+        currentUser = authResponse.user;
+        console.log('JobFlow: User authenticated:', currentUser?.email);
+        document.getElementById('jobflow-user-name').textContent =
+          currentUser?.name || currentUser?.email || 'User';
 
         showMainPage();
       } else {
-        console.log('JobFlow: Not authenticated');
+        console.log('JobFlow: Token invalid');
+        // Remove invalid token
+        await window.JobFlowAPI.removeAuthToken();
         isAuthenticated = false;
         showLoginPage();
       }
@@ -586,26 +621,6 @@
       console.error('JobFlow: Auth check failed:', error);
       isAuthenticated = false;
       showLoginPage();
-    }
-  }
-
-  // Get auth token (not available in content script, use credentials: 'include' instead)
-  async function getAuthToken() {
-    try {
-      // Check if chrome.cookies exists and is available
-      if (typeof chrome !== 'undefined' && chrome.cookies && typeof chrome.cookies.get === 'function') {
-        const cookie = await chrome.cookies.get({
-          url: 'https://dusti.pro',
-          name: 'token'
-        });
-        return cookie ? cookie.value : null;
-      }
-      // In content script context, chrome.cookies API is not available
-      // We rely on credentials: 'include' to send cookies automatically
-      return null;
-    } catch (error) {
-      console.log('JobFlow: Could not access cookies, using credentials mode');
-      return null;
     }
   }
 

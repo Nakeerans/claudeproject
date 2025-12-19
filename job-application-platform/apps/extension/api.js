@@ -5,27 +5,67 @@
 // For production, use 'https://dusti.pro'
 const API_BASE_URL = 'https://dusti.pro';
 
+// Storage key for auth token
+const AUTH_TOKEN_KEY = 'jobflow_auth_token';
+const USER_DATA_KEY = 'jobflow_user_data';
+
 /**
- * Get authentication token from cookies (via background script)
+ * Get authentication token from chrome.storage
  * @returns {Promise<string|null>} - Token value or null
  */
 async function getAuthToken() {
   try {
-    // Check if chrome.cookies exists and is available
-    if (typeof chrome !== 'undefined' && chrome.cookies && typeof chrome.cookies.get === 'function') {
-      const cookie = await chrome.cookies.get({
-        url: API_BASE_URL,
-        name: 'token'
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      return new Promise((resolve) => {
+        chrome.storage.local.get([AUTH_TOKEN_KEY], (result) => {
+          resolve(result[AUTH_TOKEN_KEY] || null);
+        });
       });
-      return cookie ? cookie.value : null;
     }
-    // In content script context, chrome.cookies is not available
-    // Return null and rely on credentials: 'include'
-    console.log('JobFlow: chrome.cookies not available, using credentials mode');
+    console.log('JobFlow: chrome.storage not available');
     return null;
   } catch (error) {
-    console.log('JobFlow: Could not access cookies API, using credentials mode');
+    console.log('JobFlow: Could not access storage API:', error);
     return null;
+  }
+}
+
+/**
+ * Store authentication token in chrome.storage
+ * @param {string} token - Auth token to store
+ * @returns {Promise<void>}
+ */
+async function setAuthToken(token) {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      return new Promise((resolve) => {
+        chrome.storage.local.set({ [AUTH_TOKEN_KEY]: token }, () => {
+          console.log('JobFlow: Token stored successfully');
+          resolve();
+        });
+      });
+    }
+  } catch (error) {
+    console.error('JobFlow: Could not store token:', error);
+  }
+}
+
+/**
+ * Remove authentication token from chrome.storage
+ * @returns {Promise<void>}
+ */
+async function removeAuthToken() {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      return new Promise((resolve) => {
+        chrome.storage.local.remove([AUTH_TOKEN_KEY, USER_DATA_KEY], () => {
+          console.log('JobFlow: Token removed successfully');
+          resolve();
+        });
+      });
+    }
+  } catch (error) {
+    console.error('JobFlow: Could not remove token:', error);
   }
 }
 
@@ -38,7 +78,7 @@ async function getAuthToken() {
 async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
 
-  // Try to get token from cookie (works in background/popup, not content script)
+  // Get token from chrome.storage
   const token = await getAuthToken();
 
   const defaultOptions = {
@@ -47,7 +87,6 @@ async function apiRequest(endpoint, options = {}) {
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options.headers
     },
-    credentials: 'include', // Send cookies automatically
     mode: 'cors' // Allow cross-origin requests
   };
 
@@ -137,6 +176,10 @@ if (typeof window !== 'undefined') {
     getPatterns,
     savePattern,
     updatePatternStats,
-    checkAuth
+    checkAuth,
+    setAuthToken,
+    removeAuthToken,
+    getAuthToken,
+    apiRequest // Expose for direct API calls
   };
 }
