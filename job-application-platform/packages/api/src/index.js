@@ -25,6 +25,8 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
+    console.log('CORS request from origin:', origin);
+
     // Allow requests with no origin (like mobile apps, Postman, or same-origin)
     if (!origin) return callback(null, true);
 
@@ -38,14 +40,24 @@ const corsOptions = {
       return callback(null, true);
     }
 
+    // Allow moz-extension:// origins (Firefox)
+    if (origin.startsWith('moz-extension://')) {
+      return callback(null, true);
+    }
+
     // Check if origin is in allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.warn('CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400, // 24 hours
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));

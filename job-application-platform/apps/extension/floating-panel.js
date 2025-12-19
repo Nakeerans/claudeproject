@@ -11,6 +11,7 @@
   let isExpanded = false;
   let isAuthenticated = false;
   let currentUser = null;
+  let isExtensionActive = false; // Extension on/off state
 
   // Create the floating panel
   function createPanel() {
@@ -441,18 +442,27 @@
     const autofillBtn = document.getElementById('jobflow-autofill-btn');
     const recordBtn = document.getElementById('jobflow-record-btn');
 
-    // Toggle panel
+    // Toggle panel - First click: show panel, Second click: collapse panel, Third click: hide everything
     toggleBtn.addEventListener('click', () => {
-      isExpanded = !isExpanded;
-      if (isExpanded) {
+      if (!isExtensionActive) {
+        // First click: Turn on extension and show panel
+        isExtensionActive = true;
+        isExpanded = true;
         panelContainer.classList.remove('collapsed');
         panelContainer.classList.add('expanded');
         if (isAuthenticated) {
           updateFormDetection();
         }
-      } else {
+      } else if (isExpanded) {
+        // Second click: Collapse panel but keep button visible
+        isExpanded = false;
         panelContainer.classList.remove('expanded');
         panelContainer.classList.add('collapsed');
+      } else {
+        // Third click: Turn off extension completely (hide everything)
+        isExtensionActive = false;
+        isExpanded = false;
+        panelContainer.style.display = 'none';
       }
     });
 
@@ -533,8 +543,10 @@
       }
     });
 
-    // Initialize collapsed
-    panelContainer.classList.add('collapsed');
+    // Initialize - hide completely on page load
+    panelContainer.style.display = 'none';
+    isExtensionActive = false;
+    isExpanded = false;
     checkAuthentication();
   }
 
@@ -636,6 +648,12 @@
         if (!panelContainer) {
           createPanel();
         }
+
+        // Show the panel container if hidden
+        if (panelContainer.style.display === 'none') {
+          panelContainer.style.display = 'block';
+        }
+
         // Trigger toggle
         const toggleBtn = document.getElementById('jobflow-toggle');
         if (toggleBtn) {
