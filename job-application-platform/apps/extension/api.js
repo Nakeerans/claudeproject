@@ -1,6 +1,8 @@
 // JobFlow Extension - API Client
 
 // API Configuration
+// For local development, change this to 'http://localhost:3001'
+// For production, use 'https://dusti.pro'
 const API_BASE_URL = 'https://dusti.pro';
 
 /**
