@@ -70,7 +70,7 @@ async function removeAuthToken() {
 }
 
 /**
- * Make an authenticated API request
+ * Make an authenticated API request via background script to avoid CORS
  * @param {string} endpoint - API endpoint path
  * @param {object} options - Fetch options
  * @returns {Promise<any>} - Response data
@@ -87,17 +87,43 @@ async function apiRequest(endpoint, options = {}) {
       ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options.headers
     },
-    mode: 'cors' // Allow cross-origin requests
+    mode: 'cors'
   };
 
-  const response = await fetch(url, { ...defaultOptions, ...options });
+  const finalOptions = { ...defaultOptions, ...options };
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(error.error || `HTTP ${response.status}`);
+  // Use background script as proxy to avoid CORS issues
+  // Content scripts inherit page origin, but background scripts use chrome-extension://
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        {
+          type: 'API_REQUEST',
+          url: url,
+          options: finalOptions
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else if (response && response.success) {
+            resolve(response.data);
+          } else {
+            reject(new Error(response?.error || 'API request failed'));
+          }
+        }
+      );
+    });
+  } else {
+    // Fallback to direct fetch if chrome.runtime not available
+    const response = await fetch(url, finalOptions);
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Request failed' }));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+
+    return response.json();
   }
-
-  return response.json();
 }
 
 /**

@@ -588,14 +588,15 @@
 
         showMainPage();
       } else {
-        console.log('JobFlow: Token invalid');
-        // Remove invalid token
-        await window.JobFlowAPI.removeAuthToken();
+        console.log('JobFlow: Auth check returned false');
+        // Don't remove token - might be CORS error
         isAuthenticated = false;
         showLoginPage();
       }
     } catch (error) {
       console.error('JobFlow: Auth check failed:', error);
+      // Don't remove token on error - might be network/CORS issue
+      // Token will be removed only on explicit logout
       isAuthenticated = false;
       showLoginPage();
     }

@@ -69,6 +69,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ isEnabled: state });
     return true;
   }
+
+  // Proxy API requests to avoid CORS issues
+  // Content scripts inherit the page's origin, but background scripts use chrome-extension://
+  if (message.type === 'API_REQUEST') {
+    const { url, options } = message;
+
+    fetch(url, options)
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(error => {
+            throw new Error(error.error || `HTTP ${response.status}`);
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        sendResponse({ success: true, data });
+      })
+      .catch(error => {
+        sendResponse({ success: false, error: error.message });
+      });
+
+    return true; // Keep message channel open for async response
+  }
 });
 
 // Clean up state when tab is closed
