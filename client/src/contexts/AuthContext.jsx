@@ -63,6 +63,16 @@ export const AuthProvider = ({ children }) => {
       setToken(token)
       setUser(user)
 
+      // Send token to extension if installed
+      if (token) {
+        window.postMessage({
+          type: 'JOBFLOW_AUTH_TOKEN',
+          token: token,
+          user: user
+        }, window.location.origin)
+        console.log('JobFlow: Token sent to extension')
+      }
+
       return { success: true }
     } catch (error) {
       return {
@@ -85,6 +95,16 @@ export const AuthProvider = ({ children }) => {
       setToken(token)
       setUser(user)
 
+      // Send token to extension if installed
+      if (token) {
+        window.postMessage({
+          type: 'JOBFLOW_AUTH_TOKEN',
+          token: token,
+          user: user
+        }, window.location.origin)
+        console.log('JobFlow: Token sent to extension')
+      }
+
       return { success: true }
     } catch (error) {
       return {
@@ -102,6 +122,16 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token)
       setToken(token)
       setUser(user)
+
+      // Send token to extension if installed
+      if (token) {
+        window.postMessage({
+          type: 'JOBFLOW_AUTH_TOKEN',
+          token: token,
+          user: user
+        }, window.location.origin)
+        console.log('JobFlow: Token sent to extension')
+      }
 
       return { success: true }
     } catch (error) {
