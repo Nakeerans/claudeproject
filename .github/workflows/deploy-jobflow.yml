@@ -1,0 +1,320 @@
+name: Deploy JobFlow Application
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'job-application-platform/**'
+      - '.github/workflows/deploy-jobflow.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  NODE_VERSION: '18.x'
+  MONGODB_URI: ${{ secrets.MONGODB_URI }}
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  AWS_REGION: us-east-1
+
+jobs:
+  # Build and Test Backend
+  build-backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'job-application-platform/server/package-lock.json'
+
+      - name: Install backend dependencies
+        working-directory: job-application-platform/server
+        run: |
+          npm ci
+          npm install @anthropic-ai/sdk pdfkit multer mongoose
+
+      - name: Create required directories
+        working-directory: job-application-platform/server
+        run: |
+          mkdir -p uploads/templates
+          mkdir -p uploads/resumes
+          mkdir -p uploads/cover-letters
+
+      - name: Run backend tests (if available)
+        working-directory: job-application-platform/server
+        run: npm test --if-present
+        continue-on-error: true
+
+      - name: Build backend
+        working-directory: job-application-platform/server
+        run: npm run build --if-present
+
+      - name: Cache backend build
+        uses: actions/cache@v3
+        with:
+          path: job-application-platform/server
+          key: backend-${{ github.sha }}
+
+  # Build Frontend
+  build-frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install frontend dependencies
+        working-directory: job-application-platform/client
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: job-application-platform/client
+        run: npm run build
+        env:
+          REACT_APP_API_URL: ${{ secrets.API_URL }}
+
+      - name: Cache frontend build
+        uses: actions/cache@v3
+        with:
+          path: job-application-platform/client/build
+          key: frontend-${{ github.sha }}
+
+  # Deploy to Server
+  deploy:
+    needs: [build-backend, build-frontend]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Restore backend cache
+        uses: actions/cache@v3
+        with:
+          path: job-application-platform/server
+          key: backend-${{ github.sha }}
+
+      - name: Restore frontend cache
+        uses: actions/cache@v3
+        with:
+          path: job-application-platform/client/build
+          key: frontend-${{ github.sha }}
+
+      - name: Deploy to EC2/VPS via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            # Navigate to application directory
+            cd /var/www/jobflow
+
+            # Pull latest code
+            git pull origin main
+
+            # Navigate to server directory
+            cd job-application-platform/server
+
+            # Install/update dependencies
+            npm ci
+            npm install @anthropic-ai/sdk pdfkit multer mongoose
+
+            # Create required directories
+            mkdir -p uploads/templates
+            mkdir -p uploads/resumes
+            mkdir -p uploads/cover-letters
+
+            # Set proper permissions
+            chmod -R 755 uploads/
+
+            # Create/update .env file
+            cat > .env << EOF
+            NODE_ENV=production
+            PORT=3001
+            MONGODB_URI=${{ secrets.MONGODB_URI }}
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+            ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+            EOF
+
+            # Restart backend service using PM2
+            pm2 restart jobflow-backend || pm2 start npm --name jobflow-backend -- start
+
+            # Navigate to client directory
+            cd ../client
+
+            # Install frontend dependencies
+            npm ci
+
+            # Build frontend
+            REACT_APP_API_URL=${{ secrets.API_URL }} npm run build
+
+            # Copy built files to nginx directory
+            sudo rm -rf /var/www/html/jobflow/*
+            sudo cp -r build/* /var/www/html/jobflow/
+
+            # Restart nginx
+            sudo systemctl reload nginx
+
+            echo "✅ Deployment completed successfully!"
+
+      - name: Health check
+        run: |
+          sleep 10
+          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.API_URL }}/health)
+          if [ $response -eq 200 ]; then
+            echo "✅ Health check passed"
+          else
+            echo "❌ Health check failed with status code: $response"
+            exit 1
+          fi
+
+  # Deploy Chrome Extension to Chrome Web Store
+  deploy-extension:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update extension API URL
+        working-directory: job-application-platform/apps/extension
+        run: |
+          # Update API_BASE_URL in api.js to production URL
+          # Use proper sed syntax for both macOS and Linux
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "s|const API_BASE_URL = .*|const API_BASE_URL = '${{ secrets.API_URL }}';|g" api.js
+          else
+            sed -i "s|const API_BASE_URL = .*|const API_BASE_URL = '${{ secrets.API_URL }}';|g" api.js
+          fi
+
+          # Verify the update
+          echo "Updated API_BASE_URL to:"
+          grep "const API_BASE_URL" api.js
+
+      - name: Zip extension
+        working-directory: job-application-platform/apps/extension
+        run: |
+          zip -r jobflow-extension.zip . -x "*.git*" -x "node_modules/*" -x "*.md"
+
+      - name: Upload extension to Chrome Web Store
+        uses: mnao305/chrome-extension-upload@v4.0.1
+        with:
+          file-path: job-application-platform/apps/extension/jobflow-extension.zip
+          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          publish: true
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: JobFlow Release v${{ github.run_number }}
+          body: |
+            ## JobFlow Application Release
+
+            ### Changes
+            - Backend deployed to production
+            - Frontend updated
+            - Chrome extension published
+
+            ### Features
+            - ✅ Job information extraction (16+ platforms)
+            - ✅ AI-powered resume tailoring (Claude 3.5 Sonnet)
+            - ✅ Cover letter generation
+            - ✅ Application tracking
+            - ✅ Interview management
+
+            Deployed at: ${{ github.event.head_commit.timestamp }}
+          draft: false
+          prerelease: false
+
+  # Notification
+  notify:
+    needs: [deploy, deploy-extension]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Send Slack notification
+        if: secrets.SLACK_WEBHOOK_URL != ''
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            JobFlow Deployment ${{ job.status }}
+            Branch: ${{ github.ref }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Send Discord notification
+        if: secrets.DISCORD_WEBHOOK != ''
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: ${{ job.status }}
+          title: "JobFlow Deployment"
+          description: |
+            **Status:** ${{ job.status }}
+            **Branch:** ${{ github.ref }}
+            **Commit:** ${{ github.sha }}
+            **Author:** ${{ github.actor }}
+
+# Database Migration Job (Optional - run separately)
+  migrate-database:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Run database migrations
+        working-directory: job-application-platform/server
+        run: |
+          npm ci
+          # Add your migration script here
+          # npm run migrate
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+
+      - name: Seed initial data (if needed)
+        working-directory: job-application-platform/server
+        run: |
+          # npm run seed
+          echo "Skipping seed for now"

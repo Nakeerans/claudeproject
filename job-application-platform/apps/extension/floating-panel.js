@@ -488,7 +488,7 @@
         await window.JobFlowAPI.removeAuthToken();
 
         // Clear server-side session
-        await fetch('https://dusti.pro/api/auth/logout', {
+        await fetch('https://dusti.pro/api/v1/auth/logout', {
           method: 'POST',
           mode: 'cors'
         });
@@ -580,7 +580,7 @@
         isAuthenticated = true;
 
         // Get user data
-        const authResponse = await window.JobFlowAPI.apiRequest('/api/auth/me');
+        const authResponse = await window.JobFlowAPI.apiRequest('/api/v1/auth/me');
         currentUser = authResponse.user;
         console.log('JobFlow: User authenticated:', currentUser?.email);
         document.getElementById('jobflow-user-name').textContent =

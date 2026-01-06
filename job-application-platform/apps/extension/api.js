@@ -131,7 +131,7 @@ async function apiRequest(endpoint, options = {}) {
  * @returns {Promise<object>} - User profile data
  */
 async function getProfile() {
-  return apiRequest('/api/profile');
+  return apiRequest('/api/v1/profile');
 }
 
 /**
@@ -140,7 +140,7 @@ async function getProfile() {
  * @returns {Promise<object>} - Updated profile data
  */
 async function updateProfile(profileData) {
-  return apiRequest('/api/profile', {
+  return apiRequest('/api/v1/profile', {
     method: 'PUT',
     body: JSON.stringify(profileData)
   });
@@ -153,7 +153,7 @@ async function updateProfile(profileData) {
  */
 async function getPatterns(url) {
   const params = url ? `?url=${encodeURIComponent(url)}` : '';
-  return apiRequest(`/api/patterns${params}`);
+  return apiRequest(`/api/v1/patterns${params}`);
 }
 
 /**
@@ -162,7 +162,7 @@ async function getPatterns(url) {
  * @returns {Promise<object>} - Saved pattern data
  */
 async function savePattern(patternData) {
-  return apiRequest('/api/patterns', {
+  return apiRequest('/api/v1/patterns', {
     method: 'POST',
     body: JSON.stringify(patternData)
   });
@@ -175,7 +175,7 @@ async function savePattern(patternData) {
  * @returns {Promise<object>} - Updated stats
  */
 async function updatePatternStats(patternId, success) {
-  return apiRequest(`/api/patterns/${patternId}/stats`, {
+  return apiRequest(`/api/v1/patterns/${patternId}/stats`, {
     method: 'PUT',
     body: JSON.stringify({ success })
   });
@@ -187,11 +187,44 @@ async function updatePatternStats(patternId, success) {
  */
 async function checkAuth() {
   try {
-    const response = await apiRequest('/api/auth/check');
+    const response = await apiRequest('/api/v1/auth/check');
     return response.authenticated === true;
   } catch (error) {
     return false;
   }
+}
+
+/**
+ * Send job information to backend for AI parsing and processing
+ * @param {object} jobData - Raw job information extracted from page
+ * @returns {Promise<object>} - AI-parsed and structured job data
+ */
+async function parseJobWithAI(jobData) {
+  return apiRequest('/api/v1/ai/jobs/parse', {
+    method: 'POST',
+    body: JSON.stringify(jobData)
+  });
+}
+
+/**
+ * Save analyzed job posting for tracking and resume tailoring
+ * @param {object} jobData - Parsed job information
+ * @returns {Promise<object>} - Saved job posting data
+ */
+async function saveJobPosting(jobData) {
+  return apiRequest('/api/v1/applications', {
+    method: 'POST',
+    body: JSON.stringify(jobData)
+  });
+}
+
+/**
+ * Get AI-tailored resume for a specific job
+ * @param {string} jobId - Job posting ID
+ * @returns {Promise<object>} - Tailored resume data
+ */
+async function getTailoredResume(jobId) {
+  return apiRequest(`/api/v1/applications/${jobId}/tailor-resume`);
 }
 
 // Export API functions
@@ -206,6 +239,9 @@ if (typeof window !== 'undefined') {
     setAuthToken,
     removeAuthToken,
     getAuthToken,
+    parseJobWithAI,
+    saveJobPosting,
+    getTailoredResume,
     apiRequest // Expose for direct API calls
   };
 }

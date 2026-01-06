@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         isAuthenticated = true;
 
         // Get user info from auth check response
-        const authResponse = await fetch('https://dusti.pro/api/auth/me', {
+        const authResponse = await fetch('https://dusti.pro/api/v1/auth/me', {
           headers: {
             'Authorization': `Bearer ${await getAuthToken()}`
           }
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   logoutBtn.addEventListener('click', async () => {
     try {
       // Call logout API
-      await fetch('https://dusti.pro/api/auth/logout', {
+      await fetch('https://dusti.pro/api/v1/auth/logout', {
         method: 'POST',
         credentials: 'include'
       });

@@ -57,7 +57,7 @@
       console.log('JobFlow Auth Listener: Found token in localStorage, syncing to chrome.storage');
 
       // Verify token is valid by checking with backend
-      fetch('/api/auth/me', {
+      fetch('/api/v1/auth/me', {
         headers: {
           'Authorization': `Bearer ${localStorageToken}`
         }

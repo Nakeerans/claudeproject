@@ -7,11 +7,11 @@ const API_CONFIG = {
 
   // API Endpoints (for Phase 2 implementation)
   ENDPOINTS: {
-    PROFILE: '/api/profile',
-    AUTH: '/api/auth/check',
-    SAVE_PATTERN: '/api/patterns',
-    GET_PATTERNS: '/api/patterns',
-    SAVE_RECORDING: '/api/recordings'
+    PROFILE: '/api/v1/profile',
+    AUTH: '/api/v1/auth/check',
+    SAVE_PATTERN: '/api/v1/patterns',
+    GET_PATTERNS: '/api/v1/patterns',
+    SAVE_RECORDING: '/api/v1/recordings'
   }
 };
 
